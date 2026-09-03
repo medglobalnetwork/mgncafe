@@ -404,6 +404,51 @@ class POSState {
     }
   }
 
+  deleteCategory(categoryName, fallbackCategory = "") {
+    const trimmed = categoryName.trim();
+    if (!trimmed || trimmed === "All Items") return false;
+
+    // Remove category from list
+    this.categories = this.categories.filter(c => c !== trimmed);
+    if (!fallbackCategory) {
+      fallbackCategory = this.categories.find(c => c !== "All Items") || "Beverages";
+    }
+
+    // Safely reassign any products that were in this category so they are not orphaned
+    let reassignedCount = 0;
+    this.products.forEach(p => {
+      if (p.category === trimmed) {
+        p.category = fallbackCategory;
+        reassignedCount++;
+      }
+    });
+
+    // Reset filters if currently active on deleted category
+    if (this.activeCategory === trimmed) {
+      this.activeCategory = "All Items";
+    }
+    if (this.productManagerFilter === trimmed) {
+      this.productManagerFilter = "All Items";
+    }
+
+    this.saveCategories();
+    if (reassignedCount > 0) {
+      this.saveProducts();
+    }
+
+    if (this.currentRoute === "products-manager") {
+      updateProductManagerGridDOM();
+    } else if (this.currentRoute === "dashboard") {
+      renderApp();
+    }
+
+    if (typeof cloudSync !== "undefined") {
+      cloudSync.publish("category_delete", { type: "CATEGORY_DELETE", category: trimmed, fallbackCategory });
+    }
+
+    return true;
+  }
+
   // --- TARGETED CART OPERATIONS WITH POPUP EFFECTS & COMBO SUPPORT ---
   addToCart(product, customModifier = "", cardElement = null) {
     const modifierToUse = customModifier || product.defaultModifier || "";
@@ -1236,6 +1281,25 @@ class CloudSyncManager {
           pos.saveCategories();
           if (pos.currentRoute === "products-manager") updateProductManagerGridDOM();
           if (pos.currentRoute === "dashboard") renderApp();
+        }
+        break;
+      }
+
+      case "CATEGORY_DELETE": {
+        const { category, fallbackCategory } = payload;
+        if (category && category !== "All Items") {
+          pos.categories = pos.categories.filter(c => c !== category);
+          const fallback = fallbackCategory || pos.categories.find(c => c !== "All Items") || "Beverages";
+          pos.products.forEach(p => {
+            if (p.category === category) p.category = fallback;
+          });
+          if (pos.activeCategory === category) pos.activeCategory = "All Items";
+          if (pos.productManagerFilter === category) pos.productManagerFilter = "All Items";
+          pos.saveCategories();
+          pos.saveProducts();
+          if (pos.currentRoute === "products-manager") updateProductManagerGridDOM();
+          if (pos.currentRoute === "dashboard") renderApp();
+          showToast(`🗑️ Category "${category}" deleted by another device`, "info", "delete");
         }
         break;
       }
@@ -2416,11 +2480,11 @@ function renderDashboardView() {
             
             <button 
               onclick="openAddCategoryModal()"
-              class="shrink-0 h-[36px] px-3 rounded-full border border-dashed border-primary text-primary hover:bg-primary/5 font-label-bold text-xs flex items-center gap-1 transition-colors"
-              title="Add Category"
+              class="shrink-0 h-[36px] px-3.5 rounded-full border border-dashed border-primary text-primary hover:bg-primary/5 font-label-bold text-xs flex items-center gap-1.5 transition-colors"
+              title="Manage & Delete Categories"
             >
-              <span class="material-symbols-outlined text-[15px]">add</span>
-              Add Category
+              <span class="material-symbols-outlined text-[16px]">category</span>
+              Manage Categories
             </button>
           </div>
         </div>
@@ -3323,10 +3387,11 @@ function renderProductsManagerView() {
       <div class="flex items-center gap-2 w-full sm:w-auto">
         <button 
           onclick="openAddCategoryModal()"
-          class="flex-1 sm:flex-none h-11 px-3 sm:px-4 rounded-xl border border-outline-variant bg-surface text-on-surface font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-surface-container transition-colors active:scale-95"
+          class="flex-1 sm:flex-none h-11 px-3.5 sm:px-4 rounded-xl border border-outline-variant bg-surface text-on-surface font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-surface-container transition-colors active:scale-95"
+          title="Manage & Delete Categories"
         >
           <span class="material-symbols-outlined text-[18px]">category</span>
-          New Category
+          Manage Categories
         </button>
         <button 
           onclick="openProductModal()"
@@ -6099,29 +6164,144 @@ function confirmDeleteSingleOrder(orderId, receipt) {
 
 function openAddCategoryModal() {
   const modal = document.getElementById("general-modal");
+  if (!modal) return;
+
   modal.innerHTML = `
     <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full mx-2 sm:mx-auto p-4 sm:p-6 flex flex-col gap-4 animate-fade-in-up border border-outline-variant/30 my-auto max-h-[90vh] overflow-y-auto">
-      <h3 class="font-headline-lg text-lg font-bold text-on-surface">Add New Menu Category</h3>
-      <div class="flex flex-col gap-1">
-        <label class="font-label-bold text-xs text-on-surface-variant font-bold">Category Name</label>
-        <input id="new-cat-name-input" class="h-11 px-4 rounded-xl bg-surface border border-outline-variant text-on-surface font-body-md text-sm outline-none focus:ring-2 focus:ring-primary" placeholder="e.g. Specials, Combos, Breakfast..." />
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between pb-2 border-b border-outline-variant/20">
+        <div class="flex items-center gap-2 text-primary">
+          <span class="material-symbols-outlined text-[24px]">category</span>
+          <h3 class="font-headline-lg text-lg font-bold text-on-surface">Categories Manager</h3>
+        </div>
+        <button onclick="closeModal()" class="text-on-surface-variant hover:text-on-surface">
+          <span class="material-symbols-outlined">close</span>
+        </button>
       </div>
-      <div class="flex gap-3 mt-2">
-        <button onclick="closeModal()" class="flex-1 h-11 rounded-xl border border-outline-variant font-label-bold text-on-surface">Cancel</button>
-        <button id="save-new-category-btn" class="flex-1 h-11 rounded-xl bg-primary text-on-primary font-label-bold shadow-md hover:bg-primary/90">Add Category</button>
+
+      <!-- Add New Category Field -->
+      <div class="flex flex-col gap-1.5 p-3 rounded-xl bg-surface-container border border-outline-variant/30">
+        <label class="font-label-bold text-xs text-on-surface font-bold flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[16px] text-primary">add_circle</span>
+          Create New Category
+        </label>
+        <div class="flex gap-2">
+          <input 
+            id="new-cat-name-input" 
+            class="flex-1 h-10 px-3.5 rounded-xl bg-surface border border-outline-variant text-on-surface font-body-md text-sm outline-none focus:ring-2 focus:ring-primary" 
+            placeholder="e.g. Specials, Shakes, Bakery..." 
+          />
+          <button 
+            id="save-new-category-btn" 
+            class="h-10 px-4 rounded-xl bg-primary text-on-primary font-label-bold text-xs shrink-0 flex items-center gap-1 shadow-sm active:scale-95 transition-all"
+          >
+            <span class="material-symbols-outlined text-[16px]">add</span>
+            Add
+          </button>
+        </div>
+      </div>
+
+      <!-- Existing Categories List with Delete Buttons -->
+      <div class="flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+          <span class="font-label-bold text-xs text-on-surface-variant font-bold uppercase tracking-wider">
+            All Categories (${pos.categories.length})
+          </span>
+          <span class="text-[10.5px] text-on-surface-variant">Tap trash to delete</span>
+        </div>
+
+        <div class="flex flex-col gap-1.5 max-h-64 overflow-y-auto pr-1">
+          ${pos.categories.map(cat => {
+            const isSystem = cat === "All Items";
+            const count = pos.products.filter(p => p.category === cat).length;
+            return `
+              <div class="flex items-center justify-between p-2.5 rounded-xl bg-surface border border-outline-variant/25 hover:bg-surface-container transition-all">
+                <div class="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                  <div class="w-7 h-7 rounded-lg ${isSystem ? 'bg-primary/10 text-primary' : 'bg-surface-container-high text-on-surface-variant'} flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-[16px]">${isSystem ? 'auto_awesome' : 'label'}</span>
+                  </div>
+                  <div class="flex flex-col min-w-0">
+                    <span class="font-bold text-xs text-on-surface truncate">${cat}</span>
+                    <span class="text-[10.5px] text-on-surface-variant leading-none mt-0.5">
+                      ${isSystem ? 'System master filter' : `${count} item${count === 1 ? '' : 's'}`}
+                    </span>
+                  </div>
+                </div>
+
+                ${isSystem ? `
+                  <span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold shrink-0">Protected</span>
+                ` : `
+                  <button 
+                    type="button"
+                    onclick="executeDeleteCategory('${escape(cat)}')"
+                    class="h-8 px-2.5 rounded-lg text-error hover:bg-error/10 border border-error/20 flex items-center gap-1 transition-all active:scale-90 text-xs shrink-0"
+                    title="Delete Category '${cat}'"
+                  >
+                    <span class="material-symbols-outlined text-[16px]">delete</span>
+                    <span class="text-[11px] font-bold">Delete</span>
+                  </button>
+                `}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Footer Done Button -->
+      <div class="flex justify-end pt-2 border-t border-outline-variant/20">
+        <button onclick="closeModal()" class="h-10 px-5 rounded-xl border border-outline-variant font-label-bold text-xs text-on-surface hover:bg-surface-container active:scale-95 transition-all">Done</button>
       </div>
     </div>
   `;
   modal.classList.remove("hidden");
 
-  document.getElementById("save-new-category-btn")?.addEventListener("click", () => {
-    const catName = document.getElementById("new-cat-name-input").value.trim();
+  const inputEl = document.getElementById("new-cat-name-input");
+  const saveBtn = document.getElementById("save-new-category-btn");
+
+  const submitNewCategory = () => {
+    const catName = inputEl ? inputEl.value.trim() : "";
     if (catName) {
+      if (pos.categories.map(c => c.toLowerCase()).includes(catName.toLowerCase())) {
+        showToast(`Category "${catName}" already exists`, "error", "error");
+        return;
+      }
       pos.addCategory(catName);
-      closeModal();
       showToast(`Added category "${catName}"`, "success", "category");
+      openAddCategoryModal(); // Refresh modal in-place so user immediately sees it
+    } else {
+      showToast("Please enter a category name", "error", "error");
+    }
+  };
+
+  saveBtn?.addEventListener("click", submitNewCategory);
+  inputEl?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      submitNewCategory();
     }
   });
+}
+
+function executeDeleteCategory(encodedCat) {
+  const catName = unescape(encodedCat);
+  if (!catName || catName === "All Items") return;
+
+  const count = pos.products.filter(p => p.category === catName).length;
+  const fallback = pos.categories.find(c => c !== "All Items" && c !== catName) || "Beverages";
+
+  let confirmMsg = `Are you sure you want to delete category "${catName}"?`;
+  if (count > 0) {
+    confirmMsg = `Category "${catName}" has ${count} product(s) in the menu.\n\nDeleting this category will move those ${count} product(s) to "${fallback}". Proceed?`;
+  }
+
+  if (confirm(confirmMsg)) {
+    const success = pos.deleteCategory(catName, fallback);
+    if (success) {
+      showToast(`Category "${catName}" deleted`, "info", "delete");
+      openAddCategoryModal(); // Re-render modal in-place
+    }
+  }
 }
 
 // ==========================================
