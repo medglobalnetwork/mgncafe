@@ -331,6 +331,9 @@ class POSState {
     } else if (this.currentRoute === "dashboard") {
       updateProductGridDOM();
     }
+    if (typeof cloudSync !== "undefined") {
+      cloudSync.publish("product_add", { type: "PRODUCT_ADD", product: newProduct });
+    }
     return newProduct;
   }
 
@@ -364,6 +367,9 @@ class POSState {
       } else if (this.currentRoute === "dashboard") {
         updateProductGridDOM();
       }
+      if (typeof cloudSync !== "undefined") {
+        cloudSync.publish("product_update", { type: "PRODUCT_UPDATE", product: this.products[index] });
+      }
       return this.products[index];
     }
     return null;
@@ -377,6 +383,9 @@ class POSState {
     } else if (this.currentRoute === "dashboard") {
       updateProductGridDOM();
     }
+    if (typeof cloudSync !== "undefined") {
+      cloudSync.publish("product_delete", { type: "PRODUCT_DELETE", productId });
+    }
   }
 
   addCategory(categoryName) {
@@ -388,6 +397,9 @@ class POSState {
         updateProductManagerGridDOM();
       } else if (this.currentRoute === "dashboard") {
         renderApp();
+      }
+      if (typeof cloudSync !== "undefined") {
+        cloudSync.publish("category_add", { type: "CATEGORY_ADD", category: trimmed });
       }
     }
   }
@@ -503,6 +515,9 @@ class POSState {
       previousProductIds.forEach(id => updateProductBadgeDOM(id));
       renderApp();
     }
+    if (typeof cloudSync !== "undefined") {
+      cloudSync.publish("held_orders", { type: "HELD_ORDERS_UPDATE", heldOrders: this.heldOrders });
+    }
     return heldOrder;
   }
 
@@ -521,6 +536,9 @@ class POSState {
       if (this.currentRoute === "dashboard") {
         renderApp();
       }
+      if (typeof cloudSync !== "undefined") {
+        cloudSync.publish("held_orders", { type: "HELD_ORDERS_UPDATE", heldOrders: this.heldOrders });
+      }
       return held;
     }
     return null;
@@ -531,6 +549,9 @@ class POSState {
     this.saveHeldOrders();
     if (this.currentRoute === "dashboard") {
       renderApp();
+    }
+    if (typeof cloudSync !== "undefined") {
+      cloudSync.publish("held_orders", { type: "HELD_ORDERS_UPDATE", heldOrders: this.heldOrders });
     }
   }
 
@@ -1153,9 +1174,78 @@ class CloudSyncManager {
             if (typeof playKitchenAudioChime === "function") {
               playKitchenAudioChime();
             }
+          } else if (pos.currentRoute === "history" || pos.currentRoute === "analytics") {
+            renderApp();
           }
 
           showToast(`🔔 New Order received: ${order.kitchenToken || order.receiptNumber}`, "info", "soup_kitchen");
+        }
+        break;
+      }
+
+      case "PRODUCT_ADD": {
+        const { product } = payload;
+        if (!product || !product.id) return;
+        const exists = pos.products.some(p => p.id === product.id);
+        if (!exists) {
+          pos.products.unshift(product);
+          if (product.category && !pos.categories.includes(product.category)) {
+            pos.categories.push(product.category);
+            pos.saveCategories();
+          }
+          pos.saveProducts();
+          if (pos.currentRoute === "products-manager") updateProductManagerGridDOM();
+          if (pos.currentRoute === "dashboard") updateProductGridDOM();
+          showToast(`➕ New item "${product.name}" added to menu`, "info", "inventory_2");
+        }
+        break;
+      }
+
+      case "PRODUCT_UPDATE": {
+        const { product } = payload;
+        if (!product || !product.id) return;
+        const idx = pos.products.findIndex(p => p.id === product.id);
+        if (idx > -1) {
+          pos.products[idx] = product;
+          if (product.category && !pos.categories.includes(product.category)) {
+            pos.categories.push(product.category);
+            pos.saveCategories();
+          }
+          pos.saveProducts();
+          if (pos.currentRoute === "products-manager") updateProductManagerGridDOM();
+          if (pos.currentRoute === "dashboard") updateProductGridDOM();
+          showToast(`✏️ Menu item "${product.name}" updated`, "info", "edit_note");
+        }
+        break;
+      }
+
+      case "PRODUCT_DELETE": {
+        const { productId } = payload;
+        pos.products = pos.products.filter(p => p.id !== productId);
+        pos.saveProducts();
+        if (pos.currentRoute === "products-manager") updateProductManagerGridDOM();
+        if (pos.currentRoute === "dashboard") updateProductGridDOM();
+        showToast(`🗑️ Menu item deleted by another device`, "info", "delete");
+        break;
+      }
+
+      case "CATEGORY_ADD": {
+        const { category } = payload;
+        if (category && !pos.categories.includes(category)) {
+          pos.categories.push(category);
+          pos.saveCategories();
+          if (pos.currentRoute === "products-manager") updateProductManagerGridDOM();
+          if (pos.currentRoute === "dashboard") renderApp();
+        }
+        break;
+      }
+
+      case "HELD_ORDERS_UPDATE": {
+        if (Array.isArray(payload.heldOrders)) {
+          pos.heldOrders = payload.heldOrders;
+          pos.saveHeldOrders();
+          if (pos.currentRoute === "dashboard") renderApp();
+          showToast(`📋 Parked orders updated (${pos.heldOrders.length} waiting)`, "info", "pause_circle");
         }
         break;
       }
@@ -1208,7 +1298,7 @@ class CloudSyncManager {
           pos.saveOrders();
           updateKitchenBadgeDOM();
           if (pos.currentRoute === "kitchen") updateKitchenScreenDOM();
-          if (pos.currentRoute === "history") renderApp();
+          if (pos.currentRoute === "history" || pos.currentRoute === "analytics") renderApp();
         }
         break;
       }
@@ -1218,35 +1308,64 @@ class CloudSyncManager {
         pos.saveOrders();
         updateKitchenBadgeDOM();
         if (pos.currentRoute === "kitchen") updateKitchenScreenDOM();
-        if (pos.currentRoute === "history") renderApp();
+        if (pos.currentRoute === "history" || pos.currentRoute === "analytics") renderApp();
         showToast("Order history cleared across devices", "info", "delete_forever");
         break;
       }
 
       case "SYNC_REQUEST": {
-        if (pos.orders.length > 0) {
-          this.publish("sync_res", {
-            type: "SYNC_RESPONSE",
-            target: payload.sender,
-            orders: pos.orders,
-            products: pos.products
-          });
-        }
+        this.publish("sync_res", {
+          type: "SYNC_RESPONSE",
+          target: payload.sender,
+          orders: pos.orders,
+          products: pos.products,
+          categories: pos.categories,
+          heldOrders: pos.heldOrders
+        });
         break;
       }
 
       case "SYNC_RESPONSE": {
-        if (payload.target === this.deviceId && Array.isArray(payload.orders)) {
-          payload.orders.forEach(incomingOrd => {
-            const exists = pos.orders.some(o => o.id === incomingOrd.id);
-            if (!exists) {
-              pos.orders.push(incomingOrd);
-            }
-          });
-          pos.orders.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-          pos.saveOrders();
+        if (payload.target === this.deviceId) {
+          let updatedAny = false;
+          if (Array.isArray(payload.orders) && payload.orders.length > 0) {
+            payload.orders.forEach(incomingOrd => {
+              const exists = pos.orders.some(o => o.id === incomingOrd.id);
+              if (!exists) pos.orders.push(incomingOrd);
+            });
+            pos.orders.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+            pos.saveOrders();
+            updatedAny = true;
+          }
+          if (Array.isArray(payload.products) && payload.products.length > 0) {
+            payload.products.forEach(p => {
+              const idx = pos.products.findIndex(existing => existing.id === p.id);
+              if (idx > -1) {
+                pos.products[idx] = p;
+              } else {
+                pos.products.push(p);
+              }
+            });
+            pos.saveProducts();
+            updatedAny = true;
+          }
+          if (Array.isArray(payload.categories) && payload.categories.length > 0) {
+            payload.categories.forEach(c => {
+              if (!pos.categories.includes(c)) pos.categories.push(c);
+            });
+            pos.saveCategories();
+            updatedAny = true;
+          }
+          if (Array.isArray(payload.heldOrders)) {
+            pos.heldOrders = payload.heldOrders;
+            pos.saveHeldOrders();
+            updatedAny = true;
+          }
           updateKitchenBadgeDOM();
           if (pos.currentRoute === "kitchen") updateKitchenScreenDOM();
+          if (pos.currentRoute === "products-manager") updateProductManagerGridDOM();
+          if (pos.currentRoute === "dashboard") updateProductGridDOM();
+          if (pos.currentRoute === "history" || pos.currentRoute === "analytics") renderApp();
           showToast("Synchronized with Store Cloud!", "success", "cloud_done");
         }
         break;
