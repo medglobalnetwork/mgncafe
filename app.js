@@ -333,6 +333,7 @@ class POSState {
     }
     if (typeof cloudSync !== "undefined") {
       cloudSync.publish("product_add", { type: "PRODUCT_ADD", product: newProduct });
+      try { cloudSync.uploadAllData(); } catch(e) {}
     }
     return newProduct;
   }
@@ -369,6 +370,7 @@ class POSState {
       }
       if (typeof cloudSync !== "undefined") {
         cloudSync.publish("product_update", { type: "PRODUCT_UPDATE", product: this.products[index] });
+        try { cloudSync.uploadAllData(); } catch(e) {}
       }
       return this.products[index];
     }
@@ -385,6 +387,7 @@ class POSState {
     }
     if (typeof cloudSync !== "undefined") {
       cloudSync.publish("product_delete", { type: "PRODUCT_DELETE", productId });
+      try { cloudSync.uploadAllData(); } catch(e) {}
     }
   }
 
@@ -772,7 +775,12 @@ class POSState {
 
   getTaxAmount() {
     const discountedSubtotal = Math.max(0, this.getSubtotal() - this.getDiscountAmount());
-    return (discountedSubtotal * (this.settings.taxRate / 100));
+    const rate = typeof this.settings.taxRate === "number" ? this.settings.taxRate : 0.0;
+    if (rate <= 0) return 0.00;
+    if (this.settings.taxMode === "inclusive") {
+      return (discountedSubtotal * (rate / (100 + rate)));
+    }
+    return (discountedSubtotal * (rate / 100));
   }
 
   getTotalDue() {
@@ -1179,7 +1187,7 @@ class CloudSyncManager {
     }
   }
 
-  publish(suffix, data) {
+  publish(suffix, data, options = { qos: 1 }) {
     const payload = {
       ...data,
       sender: this.deviceId,
@@ -1189,11 +1197,37 @@ class CloudSyncManager {
 
     if (this.client && this.isConnected) {
       try {
-        this.client.publish(this.getTopic(suffix), JSON.stringify(payload), { qos: 1 });
+        this.client.publish(this.getTopic(suffix), JSON.stringify(payload), options);
       } catch (err) {
         console.warn("[CloudSync] Publish error:", err);
       }
     }
+  }
+
+  uploadAllData() {
+    if (!this.isConnected) {
+      showToast("Cloud relay not connected. Reconnecting...", "info", "cloud_sync");
+      this.connect();
+    }
+    const payload = {
+      type: "FULL_CATALOG_SNAPSHOT",
+      products: pos.products,
+      categories: pos.categories,
+      settings: pos.settings,
+      timestamp: Date.now()
+    };
+    // Retain on broker so any new device connecting gets it automatically
+    this.publish("catalog_snapshot", payload, { qos: 1, retain: true });
+    this.publish("catalog_broadcast", payload, { qos: 1 });
+    showToast(`☁️ Uploaded ${pos.products.length} menu items to Store Cloud!`, "success", "cloud_upload");
+  }
+
+  requestFullSync() {
+    if (!this.isConnected) {
+      this.connect();
+    }
+    this.publish("sync_req", { type: "SYNC_REQUEST", sender: this.deviceId, route: pos.currentRoute });
+    showToast("Checking cloud for latest menu...", "info", "sync");
   }
 
   handleInboundMessage(topic, payload) {
@@ -1204,6 +1238,27 @@ class CloudSyncManager {
     console.log("[CloudSync] Received:", payload.type, payload);
 
     switch (payload.type) {
+      case "FULL_CATALOG_SNAPSHOT":
+      case "FULL_CATALOG_BROADCAST": {
+        if (Array.isArray(payload.products) && payload.products.length > 0) {
+          pos.products = payload.products;
+          pos.saveProducts();
+          if (Array.isArray(payload.categories) && payload.categories.length > 0) {
+            payload.categories.forEach(c => {
+              if (!pos.categories.includes(c)) pos.categories.push(c);
+            });
+            pos.saveCategories();
+          }
+          if (payload.settings) {
+            pos.settings = { ...pos.settings, ...payload.settings };
+            pos.saveSettings();
+          }
+          if (pos.currentRoute === "products-manager") updateProductManagerGridDOM();
+          if (pos.currentRoute === "dashboard") renderApp();
+          showToast(`☁️ Loaded ${payload.products.length} items from Store Cloud!`, "success", "cloud_download");
+        }
+        break;
+      }
       case "NEW_ORDER": {
         const order = payload.order;
         if (!order || !order.id) return;
@@ -1377,6 +1432,16 @@ class CloudSyncManager {
         break;
       }
 
+      case "SETTINGS_UPDATE": {
+        if (payload.settings) {
+          pos.settings = { ...pos.settings, ...payload.settings };
+          pos.saveSettings();
+          renderApp();
+          showToast(`⚙️ Store settings updated (GST: ${pos.settings.taxRate}%)`, "info", "settings");
+        }
+        break;
+      }
+
       case "SYNC_REQUEST": {
         this.publish("sync_res", {
           type: "SYNC_RESPONSE",
@@ -1384,7 +1449,8 @@ class CloudSyncManager {
           orders: pos.orders,
           products: pos.products,
           categories: pos.categories,
-          heldOrders: pos.heldOrders
+          heldOrders: pos.heldOrders,
+          settings: pos.settings
         });
         break;
       }
@@ -1392,6 +1458,11 @@ class CloudSyncManager {
       case "SYNC_RESPONSE": {
         if (payload.target === this.deviceId) {
           let updatedAny = false;
+          if (payload.settings) {
+            pos.settings = { ...pos.settings, ...payload.settings };
+            pos.saveSettings();
+            updatedAny = true;
+          }
           if (Array.isArray(payload.orders) && payload.orders.length > 0) {
             payload.orders.forEach(incomingOrd => {
               const exists = pos.orders.some(o => o.id === incomingOrd.id);
@@ -1402,14 +1473,18 @@ class CloudSyncManager {
             updatedAny = true;
           }
           if (Array.isArray(payload.products) && payload.products.length > 0) {
-            payload.products.forEach(p => {
-              const idx = pos.products.findIndex(existing => existing.id === p.id);
-              if (idx > -1) {
-                pos.products[idx] = p;
-              } else {
-                pos.products.push(p);
-              }
-            });
+            if (payload.products.length >= pos.products.length) {
+              pos.products = payload.products;
+            } else {
+              payload.products.forEach(p => {
+                const idx = pos.products.findIndex(existing => existing.id === p.id);
+                if (idx > -1) {
+                  pos.products[idx] = p;
+                } else {
+                  pos.products.push(p);
+                }
+              });
+            }
             pos.saveProducts();
             updatedAny = true;
           }
@@ -1619,6 +1694,10 @@ function updateCartPanelDOM(highlightCartId = null) {
 
   if (subtotalEl) subtotalEl.textContent = `${pos.settings.currency}${subtotal.toFixed(2)}`;
   if (taxEl) taxEl.textContent = `${pos.settings.currency}${tax.toFixed(2)}`;
+  const cartTaxLabel = document.getElementById("cart-tax-label");
+  if (cartTaxLabel) {
+    cartTaxLabel.textContent = (pos.settings.taxRate === 0 || !pos.settings.taxRate) ? 'Tax (0% Exempt)' : `GST (${pos.settings.taxRate}%)`;
+  }
   if (discountBtn) {
     discountBtn.textContent = discount > 0 ? `-${pos.settings.currency}${discount.toFixed(2)}` : 'Add -';
   }
@@ -2796,7 +2875,7 @@ function renderDashboardView() {
             <span id="cart-subtotal-val" class="font-semibold text-sm text-on-surface">${pos.settings.currency}${subtotal.toFixed(2)}</span>
           </div>
           <div class="flex justify-between items-center text-on-surface-variant font-label-sm">
-            <span class="uppercase tracking-wider">GST (${pos.settings.taxRate}%)</span>
+            <span id="cart-tax-label" class="uppercase tracking-wider">${(pos.settings.taxRate === 0 || !pos.settings.taxRate) ? 'Tax (0% Exempt)' : `GST (${pos.settings.taxRate}%)`}</span>
             <span id="cart-tax-val" class="font-semibold text-sm text-on-surface">${pos.settings.currency}${tax.toFixed(2)}</span>
           </div>
           <div class="flex justify-between items-center text-on-surface-variant font-label-sm">
@@ -3384,21 +3463,37 @@ function renderProductsManagerView() {
         </span>
       </div>
 
-      <div class="flex items-center gap-2 w-full sm:w-auto">
+      <div class="flex items-center gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
+        <button 
+          onclick="cloudSync.uploadAllData()"
+          class="flex-1 sm:flex-none h-11 px-3 sm:px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95"
+          title="Upload full menu to Cloud so other devices get it immediately"
+        >
+          <span class="material-symbols-outlined text-[18px]">cloud_upload</span>
+          <span>Upload to Cloud</span>
+        </button>
+        <button 
+          onclick="cloudSync.requestFullSync()"
+          class="flex-1 sm:flex-none h-11 px-3 sm:px-3.5 rounded-xl border border-outline-variant bg-surface text-on-surface font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-surface-container transition-all active:scale-95"
+          title="Download latest menu from Cloud"
+        >
+          <span class="material-symbols-outlined text-[18px]">cloud_download</span>
+          <span>Pull from Cloud</span>
+        </button>
         <button 
           onclick="openAddCategoryModal()"
-          class="flex-1 sm:flex-none h-11 px-3.5 sm:px-4 rounded-xl border border-outline-variant bg-surface text-on-surface font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-surface-container transition-colors active:scale-95"
+          class="flex-1 sm:flex-none h-11 px-3 sm:px-3.5 rounded-xl border border-outline-variant bg-surface text-on-surface font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-surface-container transition-colors active:scale-95"
           title="Manage & Delete Categories"
         >
           <span class="material-symbols-outlined text-[18px]">category</span>
-          Manage Categories
+          Categories
         </button>
         <button 
           onclick="openProductModal()"
-          class="flex-1 sm:flex-none h-11 px-3.5 sm:px-5 rounded-xl bg-primary text-on-primary font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md hover:bg-primary/90 transition-all active:scale-95"
+          class="flex-1 sm:flex-none h-11 px-3.5 sm:px-4 rounded-xl bg-primary text-on-primary font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md hover:bg-primary/90 transition-all active:scale-95"
         >
-          <span class="material-symbols-outlined text-[18px] sm:text-[20px]">add_a_photo</span>
-          Add Product
+          <span class="material-symbols-outlined text-[18px]">add_a_photo</span>
+          Add Item
         </button>
       </div>
     </div>
@@ -3679,7 +3774,7 @@ function renderPaymentMethodView() {
               <span class="text-on-surface font-body-md font-semibold">${pos.settings.currency}${subtotal.toFixed(2)}</span>
             </div>
             <div class="flex justify-between items-center mb-2.5 sm:mb-3 text-on-surface-variant font-label-sm text-xs">
-              <span>GST (${pos.settings.taxRate}%)</span>
+              <span>${(pos.settings.taxRate === 0 || !pos.settings.taxRate) ? 'Tax (0% Exempt)' : `GST (${pos.settings.taxRate}%)`}</span>
               <span class="text-on-surface font-body-md font-semibold">${pos.settings.currency}${tax.toFixed(2)}</span>
             </div>
             <div class="bg-primary text-on-primary rounded-2xl p-3 sm:p-stack-md flex justify-between items-center relative overflow-hidden shadow-lg">
@@ -3909,7 +4004,7 @@ function renderConfirmationView() {
               <span class="font-bold text-on-surface">${pos.settings.currency}${activeOrder.subtotal.toFixed(2)}</span>
             </div>
             <div class="flex justify-between items-center text-xs sm:text-sm">
-              <span class="text-on-surface-variant">GST (${activeOrder.taxRate || pos.settings.taxRate}%)</span>
+              <span class="text-on-surface-variant">${((activeOrder.taxRate !== undefined ? activeOrder.taxRate : pos.settings.taxRate) === 0) ? 'Tax (0% Exempt)' : `GST (${activeOrder.taxRate !== undefined ? activeOrder.taxRate : pos.settings.taxRate}%)`}</span>
               <span class="font-bold text-on-surface">${pos.settings.currency}${activeOrder.tax.toFixed(2)}</span>
             </div>
             <div class="flex justify-between items-center mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-outline-variant/30">
@@ -4695,9 +4790,31 @@ function renderSettingsView() {
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div class="flex flex-col gap-1">
-            <label class="font-label-bold text-xs text-on-surface-variant font-bold">GST Rate (%)</label>
-            <input id="set-tax-rate" type="number" step="0.1" class="h-10 px-3 rounded-xl bg-surface border border-outline-variant text-on-surface font-body-md text-sm outline-none focus:ring-2 focus:ring-primary font-bold" value="${pos.settings.taxRate}" />
+          <div class="flex flex-col gap-1.5">
+            <div class="flex items-center justify-between">
+              <label class="font-label-bold text-xs text-on-surface-variant font-bold">GST Rate (%)</label>
+              <span id="tax-status-badge" class="font-bold text-[11px] px-2 py-0.5 rounded-full ${(pos.settings.taxRate === 0 || !pos.settings.taxRate) ? 'bg-emerald-500/10 text-emerald-700' : 'bg-primary/10 text-primary'}">
+                ${(pos.settings.taxRate === 0 || !pos.settings.taxRate) ? '0% (Exempt / College Stall)' : `${pos.settings.taxRate}% GST`}
+              </span>
+            </div>
+            <input 
+              id="set-tax-rate" 
+              type="number" 
+              step="0.1" 
+              min="0" 
+              max="100" 
+              class="h-10 px-3 rounded-xl bg-surface border border-outline-variant text-on-surface font-body-md text-sm outline-none focus:ring-2 focus:ring-primary font-bold" 
+              value="${pos.settings.taxRate !== undefined ? pos.settings.taxRate : 0}" 
+              placeholder="0"
+              oninput="const b = document.getElementById('tax-status-badge'); if (b) { const v = parseFloat(this.value); b.textContent = (v === 0 || isNaN(v)) ? '0% (Exempt / College Stall)' : v + '% GST'; b.className = 'font-bold text-[11px] px-2 py-0.5 rounded-full ' + ((v === 0 || isNaN(v)) ? 'bg-emerald-500/10 text-emerald-700' : 'bg-primary/10 text-primary'); }"
+            />
+            <div class="flex items-center gap-1.5 pt-0.5 flex-wrap">
+              <span class="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Presets:</span>
+              <button type="button" onclick="const el=document.getElementById('set-tax-rate'); if(el){el.value='0'; el.dispatchEvent(new Event('input'));}" class="h-6 px-2 rounded-lg bg-surface-container hover:bg-emerald-500/15 text-on-surface hover:text-emerald-700 text-[11px] font-bold border border-outline-variant/30 active:scale-95 transition-all">0% (College Stall)</button>
+              <button type="button" onclick="const el=document.getElementById('set-tax-rate'); if(el){el.value='5'; el.dispatchEvent(new Event('input'));}" class="h-6 px-2 rounded-lg bg-surface-container hover:bg-primary/10 text-on-surface text-[11px] font-bold border border-outline-variant/30 active:scale-95 transition-all">5% (F&B)</button>
+              <button type="button" onclick="const el=document.getElementById('set-tax-rate'); if(el){el.value='12'; el.dispatchEvent(new Event('input'));}" class="h-6 px-2 rounded-lg bg-surface-container hover:bg-primary/10 text-on-surface text-[11px] font-bold border border-outline-variant/30 active:scale-95 transition-all">12%</button>
+              <button type="button" onclick="const el=document.getElementById('set-tax-rate'); if(el){el.value='18'; el.dispatchEvent(new Event('input'));}" class="h-6 px-2 rounded-lg bg-surface-container hover:bg-primary/10 text-on-surface text-[11px] font-bold border border-outline-variant/30 active:scale-95 transition-all">18%</button>
+            </div>
           </div>
           <div class="flex flex-col gap-1">
             <label class="font-label-bold text-xs text-on-surface-variant font-bold">Currency Symbol</label>
@@ -5711,6 +5828,58 @@ function openCloudSyncModal() {
         <p class="text-[11px] text-on-surface-variant">Both POS and Kitchen screens must use the exact same room code to sync live.</p>
       </div>
 
+      <!-- Direct Menu Cloud Upload & Download Card -->
+      <div class="p-4 bg-surface rounded-2xl border border-primary/30 flex flex-col gap-3 shadow-xs">
+        <div class="flex items-center justify-between">
+          <label class="font-label-bold text-xs text-on-surface font-bold flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-primary text-[18px]">cloud_sync</span>
+            Menu Items Sync (${pos.products.length} items on this device)
+          </label>
+        </div>
+        <p class="text-[11px] text-on-surface-variant">
+          Click <b>"Upload Menu to Cloud"</b> on Device 1 to push all items. Then on Device 2, click <b>"Pull Menu from Cloud"</b> to download them!
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button 
+            type="button"
+            onclick="cloudSync.uploadAllData()"
+            class="h-11 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-label-bold text-xs shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all"
+          >
+            <span class="material-symbols-outlined text-[18px]">cloud_upload</span>
+            Upload Menu to Cloud (${pos.products.length})
+          </button>
+          <button 
+            type="button"
+            onclick="cloudSync.requestFullSync()"
+            class="h-11 px-4 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-label-bold text-xs shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all"
+          >
+            <span class="material-symbols-outlined text-[18px]">cloud_download</span>
+            Pull Menu from Cloud
+          </button>
+        </div>
+        <!-- Quick Copy/Paste Share Backup -->
+        <div class="flex items-center gap-2 pt-1 border-t border-outline-variant/20 flex-wrap sm:flex-nowrap">
+          <button 
+            type="button"
+            onclick="copyMenuShareCode()"
+            class="flex-1 h-9 px-3 rounded-lg border border-outline-variant bg-surface-container hover:bg-surface-container-high text-on-surface font-label-bold text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+            title="Copy menu data to paste on another phone"
+          >
+            <span class="material-symbols-outlined text-[15px]">content_copy</span>
+            Copy Menu Code
+          </button>
+          <button 
+            type="button"
+            onclick="promptImportMenuCode()"
+            class="flex-1 h-9 px-3 rounded-lg border border-outline-variant bg-surface-container hover:bg-surface-container-high text-on-surface font-label-bold text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+            title="Paste menu code from Device 1"
+          >
+            <span class="material-symbols-outlined text-[15px]">file_download</span>
+            Paste / Import Menu Code
+          </button>
+        </div>
+      </div>
+
       <!-- Device Pairing Tabs / QR Codes -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         
@@ -5812,6 +5981,58 @@ function copyPairLink(link, toastMsg) {
     });
   } else {
     prompt("Copy this URL and open it on your second device:", link);
+  }
+}
+
+function copyMenuShareCode() {
+  const data = JSON.stringify({
+    type: "MGN_MENU_EXPORT",
+    version: 1,
+    products: pos.products,
+    categories: pos.categories,
+    settings: { taxRate: pos.settings.taxRate, currency: pos.settings.currency }
+  });
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(data).then(() => {
+      showToast(`📋 Copied ${pos.products.length} menu items! Open this modal on Device 2 and click 'Paste / Import'.`, "success", "content_copy");
+    }).catch(() => {
+      prompt("Copy this menu data text and send/paste on the other phone:", data);
+    });
+  } else {
+    prompt("Copy this menu data text and send/paste on the other phone:", data);
+  }
+}
+
+function promptImportMenuCode() {
+  const code = prompt("Paste the Menu Share Code from Device 1 here:");
+  if (code && code.trim()) {
+    try {
+      const parsed = JSON.parse(code.trim());
+      if (Array.isArray(parsed.products) && parsed.products.length > 0) {
+        pos.products = parsed.products;
+        pos.saveProducts();
+        if (Array.isArray(parsed.categories) && parsed.categories.length > 0) {
+          parsed.categories.forEach(c => {
+            if (!pos.categories.includes(c)) pos.categories.push(c);
+          });
+          pos.saveCategories();
+        }
+        if (parsed.settings) {
+          pos.settings = { ...pos.settings, ...parsed.settings };
+          pos.saveSettings();
+        }
+        if (typeof cloudSync !== "undefined" && cloudSync.isConnected) {
+          cloudSync.uploadAllData();
+        }
+        renderApp();
+        showToast(`✅ Successfully imported ${pos.products.length} menu items!`, "success", "check_circle");
+        closeModal();
+      } else {
+        showToast("No products found in pasted code", "error", "error");
+      }
+    } catch (e) {
+      showToast("Invalid menu code format. Please copy and paste accurately.", "error", "error");
+    }
   }
 }
 
@@ -6603,7 +6824,7 @@ function printThermalReceipt(orderToPrint = null) {
         </div>
       ` : ''}
       <div style="display: flex; justify-content: space-between;">
-        <span>GST (${order.taxRate || pos.settings.taxRate}%):</span>
+        <span>${((order.taxRate !== undefined ? order.taxRate : pos.settings.taxRate) === 0) ? 'Tax (0% Exempt)' : `GST (${order.taxRate !== undefined ? order.taxRate : pos.settings.taxRate}%)`}:</span>
         <span>${pos.settings.currency}${order.tax.toFixed(2)}</span>
       </div>
       <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; margin-top: 4px; border-top: 1px solid black; padding-top: 2px;">
@@ -6890,8 +7111,8 @@ function bindEventListeners() {
     pos.settings.businessEmail = document.getElementById("set-business-email")?.value.trim() || "";
     pos.settings.gstin = document.getElementById("set-gstin")?.value.trim() || "";
     pos.settings.upiId = document.getElementById("set-upi-id")?.value.trim() || "";
-    pos.settings.receiptAddress = document.getElementById("set-receipt-address")?.value.trim() || "MGN Cafe, Main Road";
-    pos.settings.taxRate = parseFloat(document.getElementById("set-tax-rate")?.value) || 5.0;
+    const rawTaxRate = parseFloat(document.getElementById("set-tax-rate")?.value);
+    pos.settings.taxRate = (!isNaN(rawTaxRate) && rawTaxRate >= 0) ? rawTaxRate : 0.0;
     pos.settings.currency = document.getElementById("set-currency")?.value.trim() || "₹";
     pos.settings.taxMode = document.getElementById("set-tax-mode")?.value || "exclusive";
     pos.settings.invoicePrefix = document.getElementById("set-invoice-prefix")?.value.trim() || "MGN-";
@@ -6915,8 +7136,11 @@ function bindEventListeners() {
     pos.settings.showCustomerOnReceipt = !!document.getElementById("set-show-customer")?.checked;
 
     pos.saveSettings();
+    if (typeof cloudSync !== "undefined") {
+      cloudSync.publish("settings_update", { type: "SETTINGS_UPDATE", settings: pos.settings });
+    }
     renderApp();
-    showToast("All settings and drawer float saved successfully", "success", "check");
+    showToast(`Settings saved successfully (GST: ${pos.settings.taxRate}%)`, "success", "check");
   });
 
   document.getElementById("test-print-receipt-btn")?.addEventListener("click", () => {
@@ -6929,10 +7153,10 @@ function bindEventListeners() {
         { name: "Iced Vanilla Latte", qty: 2, price: 180.00, modifier: "Oat Milk" }
       ],
       subtotal: 609.00,
-      tax: 30.45,
-      taxRate: pos.settings.taxRate,
+      tax: parseFloat(((pos.settings.taxRate || 0) > 0 ? (609.00 * ((pos.settings.taxRate || 0) / 100)) : 0).toFixed(2)),
+      taxRate: pos.settings.taxRate !== undefined ? pos.settings.taxRate : 0.0,
       discount: 0,
-      total: 639.45,
+      total: parseFloat((609.00 + ((pos.settings.taxRate || 0) > 0 ? (609.00 * ((pos.settings.taxRate || 0) / 100)) : 0)).toFixed(2)),
       paymentMethod: "UPI / Digital",
       terminal: pos.settings.terminal,
       cashier: pos.settings.cashier
