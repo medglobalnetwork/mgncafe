@@ -1082,6 +1082,66 @@ class POSState {
 // Global State Instance
 const pos = new POSState();
 
+// Helper: Compress camera photo before saving to localStorage or transmitting
+function compressImageFile(file, maxWidth = 250, maxHeight = 250, quality = 0.75) {
+  return new Promise((resolve) => {
+    if (!file) return resolve("");
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => resolve(e.target.result);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve("");
+    reader.readAsDataURL(file);
+  });
+}
+
+// Helper: Sanitize products so that payload stays ultra-compact for MQTT, QR, and clipboard
+function getSanitizedProductsForSync(products) {
+  if (!Array.isArray(products)) return [];
+  return products.map(p => {
+    const clean = {
+      id: p.id,
+      name: p.name,
+      category: p.category,
+      price: p.price,
+      costPrice: p.costPrice || 0,
+      stock: p.stock !== undefined ? p.stock : 999,
+      sku: p.sku || "",
+      fallbackIcon: p.fallbackIcon || "restaurant",
+      color: p.color || "#6b7280",
+      isCombo: !!p.isCombo,
+      comboItems: p.comboItems || []
+    };
+    if (p.img && (!p.img.startsWith("data:") || p.img.length < 15000)) {
+      clean.img = p.img;
+    }
+    return clean;
+  });
+}
+
 // ==========================================
 // 2B. MULTI-DEVICE REAL-TIME CLOUD SYNC ENGINE
 // ==========================================
@@ -1228,7 +1288,7 @@ class CloudSyncManager {
     this.ensureConnected(() => {
       const payload = {
         type: "FULL_CATALOG_SNAPSHOT",
-        products: pos.products,
+        products: getSanitizedProductsForSync(pos.products),
         categories: pos.categories,
         settings: pos.settings,
         timestamp: Date.now()
@@ -1468,11 +1528,12 @@ class CloudSyncManager {
       }
 
       case "SYNC_REQUEST": {
+        const sanitized = getSanitizedProductsForSync(pos.products);
         this.publish("sync_res", {
           type: "SYNC_RESPONSE",
           target: payload.sender,
-          orders: pos.orders,
-          products: pos.products,
+          orders: pos.orders.slice(0, 10),
+          products: sanitized,
           categories: pos.categories,
           heldOrders: pos.heldOrders,
           settings: pos.settings
@@ -3493,10 +3554,19 @@ function renderProductsManagerView() {
           type="button"
           onclick="openShareMenuQRModal()"
           class="flex-1 sm:flex-none h-11 px-3 sm:px-3.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95"
-          title="Display QR code to scan from another phone"
+          title="Display QR code to scan from Phone 2"
         >
           <span class="material-symbols-outlined text-[18px]">qr_code_2</span>
-          <span>Share Menu (QR)</span>
+          <span>Share (QR)</span>
+        </button>
+        <button 
+          type="button"
+          onclick="openImportMenuModal()"
+          class="flex-1 sm:flex-none h-11 px-3 sm:px-3.5 rounded-xl border border-outline-variant bg-surface text-on-surface font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-surface-container transition-all active:scale-95"
+          title="Paste code or import from Device 1"
+        >
+          <span class="material-symbols-outlined text-[18px]">file_download</span>
+          <span>Import Menu</span>
         </button>
         <button 
           type="button"
@@ -6078,19 +6148,27 @@ function openShareMenuQRModal() {
   const modal = document.getElementById("general-modal");
   if (!modal) return;
 
-  const currentOrigin = typeof window !== "undefined" ? window.location.origin + window.location.pathname : "http://192.168.1.9:5500/";
+  let originToUse = "http://192.168.1.9:5500/";
+  if (typeof window !== "undefined") {
+    let host = window.location.host;
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      host = `192.168.1.9:${window.location.port || 5500}`;
+    }
+    originToUse = `${window.location.protocol}//${host}${window.location.pathname}`;
+  }
+
   const menuPayload = {
-    products: pos.products,
+    products: getSanitizedProductsForSync(pos.products),
     categories: pos.categories,
     settings: { taxRate: pos.settings.taxRate, currency: pos.settings.currency }
   };
   const jsonStr = JSON.stringify(menuPayload);
-  let shareUrl = "";
+  let shareUrl = originToUse;
   try {
     const base64Data = btoa(encodeURIComponent(jsonStr));
-    shareUrl = `${currentOrigin}?importMenu=${base64Data}`;
+    shareUrl = `${originToUse}?importMenu=${base64Data}`;
   } catch (e) {
-    shareUrl = currentOrigin;
+    shareUrl = originToUse;
   }
 
   modal.innerHTML = `
@@ -6135,7 +6213,7 @@ function openShareMenuQRModal() {
             Copy Code
           </button>
           <button 
-            onclick="promptImportMenuCode()"
+            onclick="openImportMenuModal()"
             class="flex-1 h-10 px-3 rounded-xl border border-outline-variant bg-surface text-on-surface font-label-bold text-xs flex items-center justify-center gap-1.5 hover:bg-surface-container active:scale-95 transition-all"
           >
             <span class="material-symbols-outlined text-[16px]">file_download</span>
@@ -6160,6 +6238,89 @@ function openShareMenuQRModal() {
       console.warn("QR generation error:", e);
     }
   }, 50);
+}
+
+function openImportMenuModal() {
+  const modal = document.getElementById("general-modal");
+  if (!modal) return;
+
+  modal.innerHTML = `
+    <div class="relative bg-surface-container-lowest rounded-3xl shadow-2xl max-w-md w-full mx-2 sm:mx-auto p-5 sm:p-6 flex flex-col gap-4 animate-fade-in-up border border-outline-variant/30 my-auto">
+      <div class="flex items-center justify-between border-b border-outline-variant/20 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-500/15 text-emerald-700 flex items-center justify-center">
+            <span class="material-symbols-outlined text-[24px]">file_download</span>
+          </div>
+          <div>
+            <h3 class="font-headline-lg text-base font-extrabold text-on-surface">Import Menu into this Phone</h3>
+            <p class="text-[11.5px] text-on-surface-variant">Paste the menu code from Device 1</p>
+          </div>
+        </div>
+        <button onclick="closeModal()" class="w-8 h-8 rounded-full hover:bg-surface-variant flex items-center justify-center text-on-surface-variant">
+          <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <label class="text-xs font-bold text-on-surface">Paste Menu Code Here:</label>
+        <textarea 
+          id="import-menu-textarea" 
+          rows="5" 
+          class="w-full p-3 rounded-xl bg-surface border border-outline-variant text-on-surface font-mono text-xs outline-none focus:ring-2 focus:ring-primary"
+          placeholder="Paste the code copied from Device 1 here..."
+        ></textarea>
+      </div>
+
+      <div class="flex gap-2 pt-2 border-t border-outline-variant/20">
+        <button onclick="closeModal()" class="flex-1 h-11 rounded-xl border border-outline-variant text-on-surface font-label-bold text-xs">
+          Cancel
+        </button>
+        <button 
+          id="do-import-btn"
+          onclick="executeImportFromTextarea()"
+          class="flex-1 h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-label-bold text-xs shadow-sm active:scale-95 transition-all flex items-center justify-center gap-1.5"
+        >
+          <span class="material-symbols-outlined text-[18px]">check_circle</span>
+          Import Menu Now
+        </button>
+      </div>
+    </div>
+  `;
+  modal.classList.remove("hidden");
+  setTimeout(() => document.getElementById("import-menu-textarea")?.focus(), 100);
+}
+
+function executeImportFromTextarea() {
+  const text = document.getElementById("import-menu-textarea")?.value.trim();
+  if (!text) {
+    showToast("Please paste the menu code first", "error", "error");
+    return;
+  }
+  try {
+    const parsed = JSON.parse(text);
+    if (Array.isArray(parsed.products) && parsed.products.length > 0) {
+      pos.products = parsed.products;
+      pos.saveProducts();
+      if (Array.isArray(parsed.categories)) {
+        parsed.categories = [...new Set([...pos.categories, ...parsed.categories])];
+        pos.saveCategories();
+      }
+      if (parsed.settings) {
+        pos.settings = { ...pos.settings, ...parsed.settings };
+        pos.saveSettings();
+      }
+      if (typeof cloudSync !== "undefined" && cloudSync.isConnected) {
+        cloudSync.uploadAllData();
+      }
+      renderApp();
+      closeModal();
+      showToast(`✅ Successfully imported ${pos.products.length} menu items!`, "success", "check_circle", 5000);
+    } else {
+      showToast("No items found in pasted data", "error", "error");
+    }
+  } catch (e) {
+    showToast("Invalid code format. Please copy full code from Device 1.", "error", "error");
+  }
 }
 
 function testLiveCloudSyncPing() {
