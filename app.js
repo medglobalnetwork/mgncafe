@@ -1204,30 +1204,55 @@ class CloudSyncManager {
     }
   }
 
-  uploadAllData() {
-    if (!this.isConnected) {
-      showToast("Cloud relay not connected. Reconnecting...", "info", "cloud_sync");
-      this.connect();
+  ensureConnected(callback) {
+    if (this.client && this.isConnected) {
+      callback();
+      return;
     }
-    const payload = {
-      type: "FULL_CATALOG_SNAPSHOT",
-      products: pos.products,
-      categories: pos.categories,
-      settings: pos.settings,
-      timestamp: Date.now()
-    };
-    // Retain on broker so any new device connecting gets it automatically
-    this.publish("catalog_snapshot", payload, { qos: 1, retain: true });
-    this.publish("catalog_broadcast", payload, { qos: 1 });
-    showToast(`☁️ Uploaded ${pos.products.length} menu items to Store Cloud!`, "success", "cloud_upload");
+    this.connect();
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts++;
+      if (this.client && this.isConnected) {
+        clearInterval(interval);
+        callback();
+      } else if (attempts >= 12) {
+        clearInterval(interval);
+        showToast("⚠️ Could not connect to Cloud Relay. Check internet or use 'Share Menu (QR)'.", "error", "cloud_off", 5000);
+      }
+    }, 350);
+  }
+
+  uploadAllData() {
+    showToast(`☁️ Connecting & Uploading ${pos.products.length} menu items...`, "info", "cloud_upload");
+    this.ensureConnected(() => {
+      const payload = {
+        type: "FULL_CATALOG_SNAPSHOT",
+        products: pos.products,
+        categories: pos.categories,
+        settings: pos.settings,
+        timestamp: Date.now()
+      };
+      // Retain on broker so any new device connecting gets it automatically
+      this.publish("catalog_snapshot", payload, { qos: 1, retain: true });
+      this.publish("catalog_broadcast", payload, { qos: 1 });
+      showToast(`☁️ Uploaded ${pos.products.length} menu items to Store Cloud! (Room: ${this.roomCode})`, "success", "cloud_upload", 4000);
+    });
   }
 
   requestFullSync() {
-    if (!this.isConnected) {
-      this.connect();
-    }
-    this.publish("sync_req", { type: "SYNC_REQUEST", sender: this.deviceId, route: pos.currentRoute });
-    showToast("Checking cloud for latest menu...", "info", "sync");
+    showToast(`Connecting to Room [${this.roomCode}]...`, "info", "sync");
+    this.ensureConnected(() => {
+      this.publish("sync_req", { type: "SYNC_REQUEST", sender: this.deviceId, route: pos.currentRoute });
+      showToast(`📡 Pulling menu from Room [${this.roomCode}]...`, "info", "cloud_download");
+
+      const beforeCount = pos.products.length;
+      setTimeout(() => {
+        if (pos.products.length === beforeCount && (pos.products.length <= 2 && pos.products.some(p => p.name === "Chai" || p.name === "Coffee"))) {
+          showToast(`⚠️ No response from Device 1 in Room [${this.roomCode}]. Please keep Device 1 open and click 'Upload Menu', OR tap 'Share Menu (QR)'!`, "warning", "warning", 6000);
+        }
+      }, 4000);
+    });
   }
 
   handleInboundMessage(topic, payload) {
@@ -3463,32 +3488,45 @@ function renderProductsManagerView() {
         </span>
       </div>
 
-      <div class="flex items-center gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
+      <div class="flex items-center gap-2 w-full sm:w-auto flex-wrap">
         <button 
+          type="button"
+          onclick="openShareMenuQRModal()"
+          class="flex-1 sm:flex-none h-11 px-3 sm:px-3.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95"
+          title="Display QR code to scan from another phone"
+        >
+          <span class="material-symbols-outlined text-[18px]">qr_code_2</span>
+          <span>Share Menu (QR)</span>
+        </button>
+        <button 
+          type="button"
           onclick="cloudSync.uploadAllData()"
-          class="flex-1 sm:flex-none h-11 px-3 sm:px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95"
+          class="flex-1 sm:flex-none h-11 px-3 sm:px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95"
           title="Upload full menu to Cloud so other devices get it immediately"
         >
           <span class="material-symbols-outlined text-[18px]">cloud_upload</span>
           <span>Upload to Cloud</span>
         </button>
         <button 
+          type="button"
           onclick="cloudSync.requestFullSync()"
-          class="flex-1 sm:flex-none h-11 px-3 sm:px-3.5 rounded-xl border border-outline-variant bg-surface text-on-surface font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-surface-container transition-all active:scale-95"
+          class="flex-1 sm:flex-none h-11 px-3 sm:px-3 rounded-xl border border-outline-variant bg-surface text-on-surface font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-surface-container transition-all active:scale-95"
           title="Download latest menu from Cloud"
         >
           <span class="material-symbols-outlined text-[18px]">cloud_download</span>
           <span>Pull from Cloud</span>
         </button>
         <button 
+          type="button"
           onclick="openAddCategoryModal()"
-          class="flex-1 sm:flex-none h-11 px-3 sm:px-3.5 rounded-xl border border-outline-variant bg-surface text-on-surface font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-surface-container transition-colors active:scale-95"
+          class="flex-1 sm:flex-none h-11 px-3 sm:px-3 rounded-xl border border-outline-variant bg-surface text-on-surface font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-surface-container transition-colors active:scale-95"
           title="Manage & Delete Categories"
         >
           <span class="material-symbols-outlined text-[18px]">category</span>
           Categories
         </button>
         <button 
+          type="button"
           onclick="openProductModal()"
           class="flex-1 sm:flex-none h-11 px-3.5 sm:px-4 rounded-xl bg-primary text-on-primary font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md hover:bg-primary/90 transition-all active:scale-95"
         >
@@ -6036,6 +6074,94 @@ function promptImportMenuCode() {
   }
 }
 
+function openShareMenuQRModal() {
+  const modal = document.getElementById("general-modal");
+  if (!modal) return;
+
+  const currentOrigin = typeof window !== "undefined" ? window.location.origin + window.location.pathname : "http://192.168.1.9:5500/";
+  const menuPayload = {
+    products: pos.products,
+    categories: pos.categories,
+    settings: { taxRate: pos.settings.taxRate, currency: pos.settings.currency }
+  };
+  const jsonStr = JSON.stringify(menuPayload);
+  let shareUrl = "";
+  try {
+    const base64Data = btoa(encodeURIComponent(jsonStr));
+    shareUrl = `${currentOrigin}?importMenu=${base64Data}`;
+  } catch (e) {
+    shareUrl = currentOrigin;
+  }
+
+  modal.innerHTML = `
+    <div class="relative bg-surface-container-lowest rounded-3xl shadow-2xl max-w-md w-full mx-2 sm:mx-auto p-5 sm:p-6 flex flex-col gap-4 animate-fade-in-up border border-outline-variant/30 my-auto">
+      <div class="flex items-center justify-between border-b border-outline-variant/20 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-800 flex items-center justify-center">
+            <span class="material-symbols-outlined text-[24px]">qr_code_2</span>
+          </div>
+          <div>
+            <h3 class="font-headline-lg text-base font-extrabold text-on-surface">Share Menu to Phone 2</h3>
+            <p class="text-[11.5px] text-on-surface-variant">${pos.products.length} Menu items ready to transfer</p>
+          </div>
+        </div>
+        <button onclick="closeModal()" class="w-8 h-8 rounded-full hover:bg-surface-variant flex items-center justify-center text-on-surface-variant">
+          <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
+      </div>
+
+      <div class="p-4 bg-surface rounded-2xl border border-outline-variant/30 flex flex-col items-center gap-3 shadow-xs">
+        <div id="share-menu-qr-box" class="w-48 h-48 bg-white p-2 rounded-xl flex items-center justify-center border border-outline-variant/30 shadow-xs"></div>
+        <div class="text-center">
+          <p class="text-xs font-bold text-on-surface">Scan with Phone 2's Camera</p>
+          <p class="text-[11px] text-on-surface-variant mt-0.5">Tapping the link on Phone 2 will instantly import all ${pos.products.length} items!</p>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <button 
+          onclick="copyPairLink('${shareUrl}', 'Direct transfer link copied! Send via WhatsApp to Phone 2.')"
+          class="h-11 px-4 rounded-xl bg-primary text-on-primary font-label-bold text-xs shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all"
+        >
+          <span class="material-symbols-outlined text-[18px]">share</span>
+          Copy Direct Transfer Link
+        </button>
+        <div class="flex gap-2">
+          <button 
+            onclick="copyMenuShareCode()"
+            class="flex-1 h-10 px-3 rounded-xl border border-outline-variant bg-surface text-on-surface font-label-bold text-xs flex items-center justify-center gap-1.5 hover:bg-surface-container active:scale-95 transition-all"
+          >
+            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+            Copy Code
+          </button>
+          <button 
+            onclick="promptImportMenuCode()"
+            class="flex-1 h-10 px-3 rounded-xl border border-outline-variant bg-surface text-on-surface font-label-bold text-xs flex items-center justify-center gap-1.5 hover:bg-surface-container active:scale-95 transition-all"
+          >
+            <span class="material-symbols-outlined text-[16px]">file_download</span>
+            Paste / Import
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  modal.classList.remove("hidden");
+
+  setTimeout(() => {
+    try {
+      const qrBox = document.getElementById("share-menu-qr-box");
+      if (typeof QRCode !== "undefined" && qrBox) {
+        qrBox.innerHTML = "";
+        new QRCode(qrBox, { text: shareUrl, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.L });
+      } else if (qrBox) {
+        qrBox.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(shareUrl)}" class="w-44 h-44" />`;
+      }
+    } catch (e) {
+      console.warn("QR generation error:", e);
+    }
+  }, 50);
+}
+
 function testLiveCloudSyncPing() {
   if (typeof cloudSync !== "undefined") {
     cloudSync.publish("ping", { type: "PING_TEST", senderRole: pos.currentRoute === "kitchen" ? "Kitchen Screen" : "POS Counter" });
@@ -7297,6 +7423,37 @@ function updateHeaderClock() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Auto-detect ?importMenu= in URL (for 1-click QR / Link sharing)
+  try {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const importParam = urlParams.get("importMenu");
+      if (importParam) {
+        const decoded = decodeURIComponent(atob(importParam));
+        const parsed = JSON.parse(decoded);
+        if (Array.isArray(parsed.products) && parsed.products.length > 0) {
+          pos.products = parsed.products;
+          pos.saveProducts();
+          if (Array.isArray(parsed.categories)) {
+            parsed.categories.forEach(c => {
+              if (!pos.categories.includes(c)) pos.categories.push(c);
+            });
+            pos.saveCategories();
+          }
+          if (parsed.settings) {
+            pos.settings = { ...pos.settings, ...parsed.settings };
+            pos.saveSettings();
+          }
+          const cleanUrl = window.location.origin + window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+          showToast(`✅ Successfully imported ${pos.products.length} menu items from QR code!`, "success", "check_circle", 5000);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("importMenu query parse error:", e);
+  }
+
   renderApp();
   updateHeaderClock();
   setInterval(updateHeaderClock, 1000);
