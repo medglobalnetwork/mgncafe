@@ -329,12 +329,10 @@ button:active, .clickable:active {
 /* Transitions: Only applied on screen switch, NEVER on in-place updates */
 @keyframes screenFadeIn {
   from {
-    opacity: 0.85;
-    transform: scale(0.995);
+    opacity: 0.9;
   }
   to {
     opacity: 1;
-    transform: scale(1);
   }
 }
 
@@ -559,4 +557,92 @@ button, input, select, .product-card, .category-chip {
 
 .animate-pulse-slow {
   animation: pulseSlow 2.5s infinite ease-in-out;
+}
+
+/* ==========================================
+   MOBILE & RESPONSIVE TOUCH SYSTEM
+   ========================================== */
+
+.safe-area-pb {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+}
+
+/* Mobile Bottom Nav Active Item Styling */
+#mobile-bottom-nav .nav-item {
+  width: auto;
+  height: 48px;
+  color: var(--color-on-surface-variant);
+  border-radius: 0.75rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  background: transparent;
+}
+
+#mobile-bottom-nav .nav-item:hover:not(.active) {
+  color: var(--color-primary);
+}
+
+#mobile-bottom-nav .nav-item.active {
+  color: var(--color-primary) !important;
+  background: rgba(21, 80, 200, 0.1) !important;
+  box-shadow: none !important;
+  transform: translateY(-2px);
+}
+
+#mobile-bottom-nav .nav-item.active span.material-symbols-outlined {
+  color: var(--color-primary);
+  font-variation-settings: 'FILL' 1;
+}
+
+/* Mobile Bottom Sheet Drawer */
+@keyframes drawerSlideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0.7;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-drawer-slide-up {
+  animation: drawerSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Mobile Floating Cart Action Pill Animation */
+@keyframes floatCartPop {
+  0% {
+    transform: translateY(40px) scale(0.92);
+    opacity: 0;
+  }
+  70% {
+    transform: translateY(-4px) scale(1.02);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-cart-float {
+  animation: floatCartPop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Mobile responsive card adjustments */
+@media (max-width: 640px) {
+  .product-card {
+    height: 198px !important;
+  }
+  .product-card .img-container {
+    height: 124px !important;
+  }
+  .font-display-price {
+    font-size: clamp(24px, 6.5vw, 36px) !important;
+  }
+}
+
+/* Smooth Touch Momentum Scrolling */
+.overflow-y-auto, .overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
 }

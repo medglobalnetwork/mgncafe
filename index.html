@@ -128,15 +128,15 @@
   <!-- Main Full-Width Viewport Container -->
   <div class="w-full h-screen overflow-hidden flex flex-col">
     <!-- Top Status & Navigation Header (64px) -->
-    <header class="h-16 shrink-0 bg-surface/95 backdrop-blur-xl z-40 px-5 flex items-center justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)] border-b border-outline-variant/30 select-none">
+    <header class="h-16 shrink-0 bg-surface/95 backdrop-blur-xl z-40 px-3 sm:px-5 flex items-center justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)] border-b border-outline-variant/30 select-none">
       
       <!-- Brand Logo (Pure Logo Icon Only) -->
-      <div class="flex items-center cursor-pointer select-none group py-1" onclick="setRoute('dashboard')" title="MGN Cafe POS">
-        <img src="./assets/mgn_logo.png" alt="MGN Logo" class="h-10 w-auto max-w-[150px] object-contain drop-shadow-sm group-hover:scale-105 transition-transform" onerror="this.src='./mgn_logo.png'" />
+      <div class="flex items-center cursor-pointer select-none group py-1 shrink-0" onclick="setRoute('dashboard')" title="MGN Cafe POS">
+        <img src="./assets/mgn_logo.png" alt="MGN Logo" class="h-8 sm:h-10 w-auto max-w-[110px] sm:max-w-[150px] object-contain drop-shadow-sm group-hover:scale-105 transition-transform" onerror="this.src='./mgn_logo.png'" />
       </div>
 
-      <!-- Center Header Navigation Tabs (Pure Icons Only) -->
-      <nav class="flex items-center gap-1 bg-surface-container-low p-1 rounded-xl border border-outline-variant/30">
+      <!-- Center Header Navigation Tabs (Desktop & Tablet: Pure Icons Only) -->
+      <nav class="hidden md:flex items-center gap-1 bg-surface-container-low p-1 rounded-xl border border-outline-variant/30">
         <button 
           class="nav-item flex items-center justify-center w-11 h-10 rounded-lg transition-all active" 
           data-route="dashboard"
@@ -187,23 +187,33 @@
         </button>
       </nav>
 
-      <!-- Right Live Time & Multi-Device Cloud Sync Status -->
-      <div class="flex items-center gap-2">
+      <!-- Right Header Actions (Cloud Sync, Live Clock, Mobile Cart Header Button) -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <!-- Mobile Cart Trigger Button (Visible only on mobile) -->
+        <button 
+          id="header-mobile-cart-btn"
+          onclick="toggleMobileCart(true)"
+          class="lg:hidden flex items-center gap-1 px-2.5 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl border border-primary/20 font-label-bold text-xs transition-all active:scale-95 cursor-pointer"
+          title="Open Current Order Cart"
+        >
+          <span class="material-symbols-outlined text-[18px]">shopping_cart</span>
+          <span id="header-mobile-cart-count" class="font-bold text-xs">0</span>
+        </button>
         
         <!-- Multi-Device Cloud Sync Button -->
         <button 
           id="header-cloud-sync-btn"
           onclick="openCloudSyncModal()"
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-low hover:bg-surface-container rounded-xl border border-outline-variant/30 text-on-surface-variant font-label-bold text-xs transition-all cursor-pointer shadow-xs active:scale-95"
+          class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-surface-container-low hover:bg-surface-container rounded-xl border border-outline-variant/30 text-on-surface-variant font-label-bold text-xs transition-all cursor-pointer shadow-xs active:scale-95"
           title="Multi-Device Cloud Live Sync & Tablet Pairing"
         >
           <span id="sync-status-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span class="material-symbols-outlined text-[16px] text-primary">cloud_sync</span>
-          <span id="sync-status-label" class="hidden md:inline">Cloud Sync</span>
+          <span id="sync-status-label" class="hidden sm:inline">Sync</span>
         </button>
 
         <!-- Live Clock -->
-        <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-container-low rounded-xl border border-outline-variant/30 text-on-surface-variant font-label-bold text-xs">
+        <div class="hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-surface-container-low rounded-xl border border-outline-variant/30 text-on-surface-variant font-label-bold text-xs">
           <span class="material-symbols-outlined text-[16px] text-primary">schedule</span>
           <span id="header-live-time" class="tabular-nums"></span>
         </div>
@@ -214,28 +224,86 @@
     <main id="app-root" class="flex-1 w-full overflow-hidden relative">
       <!-- Dynamic Screen Content Rendered by app.js -->
     </main>
+
+    <!-- Mobile Bottom Navigation Bar (Visible on mobile screens < 768px) -->
+    <nav id="mobile-bottom-nav" class="md:hidden fixed bottom-0 left-0 right-0 z-40 h-16 bg-surface/95 backdrop-blur-xl border-t border-outline-variant/30 flex items-center justify-around px-1 shadow-[0_-2px_12px_rgba(0,0,0,0.06)] safe-area-pb select-none">
+      <button 
+        class="nav-item flex flex-col items-center justify-center flex-1 h-12 rounded-xl transition-all active" 
+        data-route="dashboard"
+        title="POS Register"
+      >
+        <span class="material-symbols-outlined text-[20px]">point_of_sale</span>
+        <span class="text-[10px] font-bold leading-tight mt-0.5">POS</span>
+      </button>
+
+      <button 
+        class="nav-item flex flex-col items-center justify-center flex-1 h-12 rounded-xl transition-all" 
+        data-route="analytics"
+        title="Analytics & Earnings"
+      >
+        <span class="material-symbols-outlined text-[20px]">query_stats</span>
+        <span class="text-[10px] font-bold leading-tight mt-0.5">Analytics</span>
+      </button>
+
+      <button 
+        class="nav-item flex flex-col items-center justify-center flex-1 h-12 rounded-xl transition-all" 
+        data-route="products-manager"
+        title="Menu & Inventory"
+      >
+        <span class="material-symbols-outlined text-[20px]">inventory_2</span>
+        <span class="text-[10px] font-bold leading-tight mt-0.5">Menu</span>
+      </button>
+
+      <button 
+        class="nav-item relative flex flex-col items-center justify-center flex-1 h-12 rounded-xl transition-all" 
+        data-route="kitchen"
+        title="Kitchen Display System (KDS)"
+      >
+        <span class="material-symbols-outlined text-[20px]">soup_kitchen</span>
+        <span class="text-[10px] font-bold leading-tight mt-0.5">Kitchen</span>
+        <span id="kds-pending-badge-mobile" class="hidden absolute top-0.5 right-2 min-w-4 h-4 px-1 rounded-full bg-error text-on-error font-bold text-[8.5px] flex items-center justify-center animate-pulse">0</span>
+      </button>
+
+      <button 
+        class="nav-item flex flex-col items-center justify-center flex-1 h-12 rounded-xl transition-all" 
+        data-route="history"
+        title="Sales History"
+      >
+        <span class="material-symbols-outlined text-[20px]">receipt_long</span>
+        <span class="text-[10px] font-bold leading-tight mt-0.5">History</span>
+      </button>
+
+      <button 
+        class="nav-item flex flex-col items-center justify-center flex-1 h-12 rounded-xl transition-all" 
+        data-route="settings"
+        title="Settings"
+      >
+        <span class="material-symbols-outlined text-[20px]">settings</span>
+        <span class="text-[10px] font-bold leading-tight mt-0.5">Settings</span>
+      </button>
+    </nav>
   </div>
 
   <!-- Clear All Cart Modal with Darker Backdrop -->
   <div class="fixed inset-0 z-[100] flex items-center justify-center hidden" id="clear-all-modal">
     <div class="absolute inset-0 bg-inverse-surface/80 backdrop-blur-sm" onclick="closeModal()"></div>
-    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full p-margin-edge flex flex-col gap-stack-md animate-fade-in-up">
-      <div class="flex flex-col gap-2">
-        <h3 class="font-headline-lg text-headline-lg text-on-surface">Clear All Items?</h3>
-        <p class="font-body-md text-body-md text-on-surface-variant">
+    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full m-3 sm:m-0 p-4 sm:p-margin-edge flex flex-col gap-3 sm:gap-stack-md animate-fade-in-up">
+      <div class="flex flex-col gap-1.5 sm:gap-2">
+        <h3 class="font-headline-lg text-lg sm:text-headline-lg text-on-surface font-bold">Clear All Items?</h3>
+        <p class="font-body-md text-xs sm:text-body-md text-on-surface-variant">
           This will remove all items currently in the cart. This action cannot be undone.
         </p>
       </div>
-      <div class="flex gap-gutter mt-2">
+      <div class="flex gap-2 sm:gap-gutter mt-2">
         <button 
-          class="flex-1 h-touch-target-min rounded-xl border border-outline-variant font-label-bold text-label-bold text-on-surface hover:bg-surface-container-high transition-colors" 
+          class="flex-1 h-11 sm:h-touch-target-min rounded-xl border border-outline-variant font-label-bold text-xs sm:text-label-bold text-on-surface hover:bg-surface-container-high transition-colors" 
           onclick="closeModal()"
         >
           Cancel
         </button>
         <button 
           id="confirm-clear-cart-btn"
-          class="flex-1 h-touch-target-min rounded-xl bg-error text-on-error font-label-bold text-label-bold hover:bg-error/90 transition-colors shadow-sm active:scale-95"
+          class="flex-1 h-11 sm:h-touch-target-min rounded-xl bg-error text-on-error font-label-bold text-xs sm:text-label-bold hover:bg-error/90 transition-colors shadow-sm active:scale-95"
         >
           Clear All
         </button>

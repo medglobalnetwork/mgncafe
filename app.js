@@ -1330,6 +1330,36 @@ function showToast(message, type = "info", icon = "info") {
 // 4. ZERO-FLICKER IN-PLACE DOM UPDATERS
 // ==========================================
 
+function toggleMobileCart(open) {
+  const drawer = document.getElementById("pos-order-panel");
+  const backdrop = document.getElementById("pos-mobile-cart-backdrop");
+  if (!drawer) return;
+  
+  if (open) {
+    drawer.classList.remove("translate-y-full");
+    drawer.classList.add("translate-y-0");
+    if (backdrop) {
+      backdrop.classList.remove("hidden");
+      requestAnimationFrame(() => {
+        backdrop.classList.remove("opacity-0");
+        backdrop.classList.add("opacity-100");
+      });
+    }
+  } else {
+    drawer.classList.remove("translate-y-0");
+    drawer.classList.add("translate-y-full");
+    if (backdrop) {
+      backdrop.classList.remove("opacity-100");
+      backdrop.classList.add("opacity-0");
+      setTimeout(() => {
+        if (backdrop.classList.contains("opacity-0")) {
+          backdrop.classList.add("hidden");
+        }
+      }, 250);
+    }
+  }
+}
+
 function updateCartPanelDOM(highlightCartId = null) {
   const itemsContainer = document.getElementById("cart-items-container");
   const subtotalEl = document.getElementById("cart-subtotal-val");
@@ -1414,6 +1444,58 @@ function updateCartPanelDOM(highlightCartId = null) {
   }
   if (barItemCount) barItemCount.textContent = `${itemCount} Items`;
   if (barTotal) barTotal.textContent = `${pos.settings.currency}${total.toFixed(2)}`;
+
+  // Mobile elements in-place sync
+  const mobileBarTotal = document.getElementById("mobile-bar-total-val");
+  const mobileCartBar = document.getElementById("pos-mobile-cart-bar");
+  const mobileCartCount = document.getElementById("header-mobile-cart-count");
+  const mobileBarBadge = document.getElementById("mobile-bar-badge");
+  const mobileProceedBtn = document.getElementById("mobile-proceed-payment-btn");
+  const mobileDiscountText = document.getElementById("mobile-bar-discount-text");
+  const drawerProceedBtn = document.getElementById("drawer-proceed-btn");
+
+  if (mobileBarTotal) {
+    mobileBarTotal.textContent = `${pos.settings.currency}${total.toFixed(2)}`;
+  }
+  if (mobileBarBadge) {
+    mobileBarBadge.textContent = itemCount;
+  }
+  if (mobileDiscountText) {
+    mobileDiscountText.textContent = discount > 0 ? 'Discount' : 'Disc';
+  }
+  if (mobileCartCount) {
+    mobileCartCount.textContent = itemCount;
+  }
+  if (mobileCartBar) {
+    if (itemCount > 0) {
+      mobileCartBar.classList.remove("hidden");
+    } else {
+      mobileCartBar.classList.add("hidden");
+      toggleMobileCart(false);
+    }
+  }
+  if (mobileProceedBtn) {
+    if (itemCount === 0) {
+      mobileProceedBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      mobileProceedBtn.setAttribute('disabled', 'true');
+    } else {
+      mobileProceedBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      mobileProceedBtn.removeAttribute('disabled');
+    }
+  }
+  if (drawerProceedBtn) {
+    const proceedSpan = drawerProceedBtn.querySelector('span');
+    if (proceedSpan) {
+      proceedSpan.textContent = `Proceed to Payment (${pos.settings.currency}${total.toFixed(2)})`;
+    }
+    if (itemCount === 0) {
+      drawerProceedBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      drawerProceedBtn.setAttribute('disabled', 'true');
+    } else {
+      drawerProceedBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      drawerProceedBtn.removeAttribute('disabled');
+    }
+  }
 
   const bottomBar = document.getElementById("pos-bottom-bar");
   const mainRow = document.getElementById("pos-main-dashboard-row");
@@ -1580,7 +1662,7 @@ function updateProductGridDOM() {
       return `
         <div class="relative group">
           <div 
-            class="product-card pm-draggable-card relative flex flex-col w-full bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/30 shadow-[0_2px_8px_rgba(0,0,0,0.04)] group hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)] group-hover:border-primary/40 transition-all duration-200 h-[218px] text-left cursor-grab active:cursor-grabbing ${inCartQty > 0 ? 'in-cart ring-2 ring-primary ring-offset-1' : ''}"
+            class="product-card pm-draggable-card relative flex flex-col w-full bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/30 shadow-[0_2px_8px_rgba(0,0,0,0.04)] group hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)] group-hover:border-primary/40 transition-all duration-200 h-[200px] sm:h-[218px] text-left cursor-grab active:cursor-grabbing ${inCartQty > 0 ? 'in-cart ring-2 ring-primary ring-offset-1' : ''}"
             data-product-id="${p.id}"
             draggable="true"
             role="button"
@@ -1594,7 +1676,7 @@ function updateProductGridDOM() {
             ` : ''}
 
             <!-- Large Image Area -->
-            <div class="w-full h-[145px] bg-surface-container shrink-0 relative overflow-hidden flex items-center justify-center rounded-t-2xl">
+            <div class="img-container w-full h-[126px] sm:h-[145px] bg-surface-container shrink-0 relative overflow-hidden flex items-center justify-center rounded-t-2xl">
               ${p.img ? `
                 <img 
                   class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
@@ -1623,7 +1705,7 @@ function updateProductGridDOM() {
               <button 
                 type="button"
                 onclick="event.stopPropagation(); openItemCustomizePopup('${p.id}');"
-                class="absolute ${inCartQty > 0 ? 'top-10' : 'top-2.5'} right-2.5 w-7 h-7 rounded-full bg-surface/90 backdrop-blur-md hover:bg-primary hover:text-white text-on-surface-variant flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 shadow-sm z-10 border border-outline-variant/30 active:scale-90"
+                class="absolute ${inCartQty > 0 ? 'top-10' : 'top-2.5'} right-2.5 w-7 h-7 rounded-full bg-surface/90 backdrop-blur-md hover:bg-primary hover:text-white text-on-surface-variant flex items-center justify-center transition-all opacity-100 lg:opacity-0 group-hover:opacity-100 shadow-sm z-10 border border-outline-variant/30 active:scale-90"
                 title="Customize Item"
               >
                 <span class="material-symbols-outlined text-[14px]">tune</span>
@@ -2105,6 +2187,22 @@ function renderApp() {
     }
   });
 
+  const mobileCartBtn = document.getElementById("header-mobile-cart-btn");
+  const mobileCartCount = document.getElementById("header-mobile-cart-count");
+  if (mobileCartBtn) {
+    if (pos.currentRoute === "dashboard") {
+      mobileCartBtn.classList.remove("hidden");
+    } else {
+      mobileCartBtn.classList.add("hidden");
+    }
+  }
+  if (mobileCartCount) {
+    mobileCartCount.textContent = pos.getItemCount();
+  }
+  if (typeof updateKitchenBadgeDOM === "function") {
+    updateKitchenBadgeDOM();
+  }
+
   let mainContentHtml = "";
   switch (pos.currentRoute) {
     case "dashboard":
@@ -2161,20 +2259,20 @@ function renderDashboardView() {
 
   return `
   <div class="flex flex-col w-full h-full relative animate-screen-enter select-none">
-    <div id="pos-main-dashboard-row" class="flex flex-row w-full ${itemCount > 0 ? 'h-[calc(100vh-64px-76px)]' : 'h-[calc(100vh-64px)]'} overflow-hidden">
+    <div id="pos-main-dashboard-row" class="flex flex-row w-full ${itemCount > 0 ? 'h-[calc(100vh-64px)] lg:h-[calc(100vh-64px-76px)]' : 'h-[calc(100vh-64px)]'} overflow-hidden pb-16 lg:pb-0">
       
-      <!-- Product Workspace (68%) -->
-      <div class="flex-1 w-[68%] flex flex-col h-full bg-surface overflow-hidden relative shadow-[-4px_0_12px_rgba(0,0,0,0.02)]">
+      <!-- Product Workspace (Full on mobile, 68% on Desktop) -->
+      <div class="flex-1 w-full lg:w-[68%] flex flex-col h-full bg-surface overflow-hidden relative shadow-[-4px_0_12px_rgba(0,0,0,0.02)]">
         
         <!-- Top Search & Categories -->
-        <div class="p-margin-edge pb-2 flex flex-col gap-3 shrink-0 z-10 relative">
+        <div class="p-3 sm:p-margin-edge pb-2 flex flex-col gap-2.5 sm:gap-3 shrink-0 z-10 relative">
           <div class="relative w-full">
-            <div class="absolute inset-y-0 left-0 pl-gutter flex items-center pointer-events-none text-on-surface-variant">
+            <div class="absolute inset-y-0 left-0 pl-3.5 sm:pl-gutter flex items-center pointer-events-none text-on-surface-variant">
               <span class="material-symbols-outlined text-[20px]">search</span>
             </div>
             <input 
               id="product-search-input"
-              class="w-full h-[48px] pl-[48px] pr-[44px] rounded-full bg-surface-container-highest text-on-surface font-body-lg text-body-lg placeholder-on-surface-variant outline-none focus:ring-2 focus:ring-primary focus:bg-surface transition-all shadow-xs" 
+              class="w-full h-[44px] sm:h-[48px] pl-[42px] sm:pl-[48px] pr-[40px] sm:pr-[44px] rounded-full bg-surface-container-highest text-on-surface font-body-lg text-sm sm:text-base placeholder-on-surface-variant outline-none focus:ring-2 focus:ring-primary focus:bg-surface transition-all shadow-xs" 
               placeholder="Search for products or categories..." 
               type="text"
               value="${pos.searchQuery}"
@@ -2190,7 +2288,7 @@ function renderDashboardView() {
           <div class="flex flex-row items-center gap-2 overflow-x-auto pb-1.5 no-scrollbar">
             ${pos.categories.map(cat => `
               <button 
-                class="category-chip shrink-0 h-[36px] px-4 rounded-full font-label-bold text-xs transition-all active:scale-95 ${pos.activeCategory === cat ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-high text-on-surface hover:bg-surface-variant'}"
+                class="category-chip shrink-0 h-[36px] px-3.5 sm:px-4 rounded-full font-label-bold text-xs transition-all active:scale-95 ${pos.activeCategory === cat ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-high text-on-surface hover:bg-surface-variant'}"
                 data-category="${cat}"
               >
                 ${cat}
@@ -2209,8 +2307,8 @@ function renderDashboardView() {
         </div>
 
         <!-- Product Grid Container -->
-        <div class="flex-1 overflow-y-auto px-margin-edge pb-margin-edge pt-1">
-          <div id="product-grid-container" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3.5 auto-rows-max">
+        <div class="flex-1 overflow-y-auto px-3 sm:px-margin-edge pb-24 lg:pb-margin-edge pt-1">
+          <div id="product-grid-container" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3.5 auto-rows-max">
             ${filteredProducts.length === 0 ? `
               ${pos.products.length === 0 ? `
                 <div class="col-span-full py-16 flex flex-col items-center justify-center text-center text-on-surface-variant gap-3 bg-surface-container-low/50 rounded-2xl border-2 border-dashed border-outline-variant/40 p-8 my-auto">
@@ -2241,7 +2339,7 @@ function renderDashboardView() {
               return `
                 <div class="relative group">
                   <div 
-                    class="product-card pm-draggable-card relative flex flex-col w-full bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/30 shadow-[0_2px_8px_rgba(0,0,0,0.04)] group hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)] group-hover:border-primary/40 transition-all duration-200 h-[218px] text-left cursor-grab active:cursor-grabbing ${inCartQty > 0 ? 'in-cart ring-2 ring-primary ring-offset-1' : ''}"
+                    class="product-card pm-draggable-card relative flex flex-col w-full bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/30 shadow-[0_2px_8px_rgba(0,0,0,0.04)] group hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)] group-hover:border-primary/40 transition-all duration-200 h-[200px] sm:h-[218px] text-left cursor-grab active:cursor-grabbing ${inCartQty > 0 ? 'in-cart ring-2 ring-primary ring-offset-1' : ''}"
                     data-product-id="${p.id}"
                     draggable="true"
                     role="button"
@@ -2255,7 +2353,7 @@ function renderDashboardView() {
                     ` : ''}
 
                     <!-- Large Image Area -->
-                    <div class="w-full h-[145px] bg-surface-container shrink-0 relative overflow-hidden flex items-center justify-center rounded-t-2xl">
+                    <div class="img-container w-full h-[126px] sm:h-[145px] bg-surface-container shrink-0 relative overflow-hidden flex items-center justify-center rounded-t-2xl">
                       ${p.img ? `
                         <img 
                           class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
@@ -2274,7 +2372,7 @@ function renderDashboardView() {
                       `}
 
                       ${p.isCombo ? `
-                        <div class="absolute top-2.5 left-2.5 px-2.5 py-0.5 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-black text-[9.5px] rounded-md shadow-md z-10 flex items-center gap-0.5 uppercase tracking-wider">
+                        <div class="absolute top-2.5 left-2.5 px-2.5 py-0.5 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-black text-[9.5px] rounded-full shadow-md z-10 flex items-center gap-0.5 uppercase tracking-wider">
                           <span class="material-symbols-outlined text-[11px]">local_fire_department</span>
                           COMBO
                         </div>
@@ -2284,7 +2382,7 @@ function renderDashboardView() {
                       <button 
                         type="button"
                         onclick="event.stopPropagation(); openItemCustomizePopup('${p.id}');"
-                        class="absolute ${inCartQty > 0 ? 'top-10' : 'top-2.5'} right-2.5 w-7 h-7 rounded-full bg-surface/90 backdrop-blur-md hover:bg-primary hover:text-white text-on-surface-variant flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 shadow-sm z-10 border border-outline-variant/30 active:scale-90"
+                        class="absolute ${inCartQty > 0 ? 'top-10' : 'top-2.5'} right-2.5 w-7 h-7 rounded-full bg-surface/90 backdrop-blur-md hover:bg-primary hover:text-white text-on-surface-variant flex items-center justify-center transition-all opacity-100 lg:opacity-0 group-hover:opacity-100 shadow-sm z-10 border border-outline-variant/30 active:scale-90"
                         title="Customize Item"
                       >
                         <span class="material-symbols-outlined text-[14px]">tune</span>
@@ -2325,9 +2423,15 @@ function renderDashboardView() {
         </div>
       </div>
 
-      <!-- Current Order Panel (32% Balanced) -->
-      <div class="w-[32%] min-w-[340px] max-w-[420px] h-full bg-surface-container-low flex flex-col relative z-20 shadow-[4px_0_12px_rgba(0,0,0,0.05)] border-l border-outline-variant/20">
+      <!-- Mobile Cart Sheet Backdrop -->
+      <div id="pos-mobile-cart-backdrop" onclick="toggleMobileCart(false)" class="lg:hidden fixed inset-0 bg-black/60 z-40 backdrop-blur-xs hidden opacity-0 transition-opacity"></div>
+
+      <!-- Current Order Panel (Desktop: 32% Side Panel | Mobile: Slide-Up Bottom Sheet Drawer) -->
+      <div id="pos-order-panel" class="fixed lg:static inset-x-0 bottom-0 z-50 lg:z-20 w-full lg:w-[32%] lg:min-w-[340px] lg:max-w-[420px] h-[88vh] lg:h-full bg-surface-container-low rounded-t-3xl lg:rounded-none shadow-2xl lg:shadow-[4px_0_12px_rgba(0,0,0,0.05)] border-t lg:border-t-0 lg:border-l border-outline-variant/30 flex flex-col transition-transform duration-300 ease-in-out translate-y-full lg:translate-y-0">
         
+        <!-- Mobile Drawer Grab Handle -->
+        <div class="lg:hidden w-12 h-1.5 bg-outline-variant/60 rounded-full mx-auto my-2 shrink-0"></div>
+
         <!-- Cart Header (Comfortable 56px) -->
         <div class="h-14 flex items-center justify-between px-4 shrink-0 bg-surface-container-low border-b border-outline-variant/20">
           <div class="flex items-center gap-2">
@@ -2363,6 +2467,16 @@ function renderDashboardView() {
               title="Clear Cart"
             >
               <span class="material-symbols-outlined text-[18px]">delete_sweep</span>
+            </button>
+
+            <!-- Mobile Close Sheet Button -->
+            <button 
+              type="button"
+              onclick="toggleMobileCart(false)"
+              class="lg:hidden text-on-surface-variant hover:text-on-surface transition-colors p-1.5 rounded-full hover:bg-surface-container-highest ml-1"
+              title="Close Cart View"
+            >
+              <span class="material-symbols-outlined text-[20px]">close</span>
             </button>
           </div>
         </div>
@@ -2492,7 +2606,7 @@ function renderDashboardView() {
           </button>
         </div>
 
-        <!-- Totals Breakdown (Comfortable) -->
+        <!-- Totals Breakdown & Mobile Proceed Button -->
         <div class="px-4 py-2.5 shrink-0 bg-surface-container-low border-t border-outline-variant/30 flex flex-col gap-1 text-xs">
           <div class="flex justify-between items-center text-on-surface-variant font-label-sm">
             <span class="uppercase tracking-wider">Subtotal</span>
@@ -2508,12 +2622,76 @@ function renderDashboardView() {
               ${discount > 0 ? `-${pos.settings.currency}${discount.toFixed(2)}` : 'Add -'}
             </button>
           </div>
+
+          <!-- Mobile Sheet Full Proceed Button -->
+          <button 
+            id="drawer-proceed-btn"
+            onclick="toggleMobileCart(false); setRoute('payment-method');"
+            class="lg:hidden w-full h-12 mt-2 bg-primary hover:bg-primary/90 text-on-primary rounded-xl font-headline-md text-sm font-bold flex items-center justify-between px-4 shadow-md active:scale-[0.98] transition-all ${itemCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}"
+            ${itemCount === 0 ? 'disabled' : ''}
+          >
+            <span>Proceed to Payment (${pos.settings.currency}${total.toFixed(2)})</span>
+            <div class="w-6 h-6 bg-on-primary/20 rounded-full flex items-center justify-center backdrop-blur-xs">
+              <span class="material-symbols-outlined text-on-primary text-[15px]">arrow_forward</span>
+            </div>
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Persistent Bottom Action Bar (Sleek 76px, Appears only when cart has items) -->
-    <div id="pos-bottom-bar" class="absolute bottom-0 left-0 w-full h-[76px] bg-surface-container-highest shadow-[0_-4px_16px_rgba(0,0,0,0.1)] flex items-center justify-between px-6 z-40 border-t border-outline-variant/30 ${itemCount > 0 ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-full opacity-0 pointer-events-none'}">
+    <!-- Mobile Sticky Proceed to Payment Bar (Docks right above bottom nav when cart has items) -->
+    <div 
+      id="pos-mobile-cart-bar" 
+      class="lg:hidden fixed bottom-16 md:bottom-0 inset-x-0 z-40 bg-surface-container-highest/98 backdrop-blur-xl border-t-2 border-primary/30 px-3 py-2.5 shadow-[0_-4px_24px_rgba(0,0,0,0.18)] flex items-center justify-between select-none ${itemCount > 0 ? '' : 'hidden'}"
+    >
+      <!-- Left: Tap to open cart drawer & view order -->
+      <div onclick="toggleMobileCart(true)" class="flex items-center gap-2.5 cursor-pointer active:scale-95 transition-transform flex-1 min-w-0 pr-2" title="Tap to view cart items">
+        <div class="relative w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
+          <span class="material-symbols-outlined text-[22px]">shopping_bag</span>
+          <span id="mobile-bar-badge" class="absolute -top-1.5 -right-1.5 h-4.5 min-w-4.5 px-1 bg-error text-on-error text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-surface">${itemCount}</span>
+        </div>
+        <div class="flex flex-col min-w-0">
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Total Due</span>
+            <span class="text-[10.5px] text-primary font-bold flex items-center">
+              <span>(View Cart)</span>
+              <span class="material-symbols-outlined text-[13px]">expand_less</span>
+            </span>
+          </div>
+          <span id="mobile-bar-total-val" class="font-display-price text-base sm:text-lg font-black text-on-surface leading-tight tabular-nums truncate">${pos.settings.currency}${total.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <!-- Right: Discount & Proceed to Payment Buttons -->
+      <div class="flex items-center gap-2 shrink-0">
+        <button 
+          type="button" 
+          id="mobile-bar-discount-btn"
+          onclick="openDiscountModal()"
+          class="h-10 px-2.5 rounded-xl border border-primary/30 bg-surface hover:bg-surface-container text-primary font-label-bold text-xs flex items-center gap-1 shadow-xs active:scale-95 transition-all"
+          title="Apply Discount"
+        >
+          <span class="material-symbols-outlined text-[16px]">sell</span>
+          <span id="mobile-bar-discount-text">${discount > 0 ? 'Discount' : 'Disc'}</span>
+        </button>
+
+        <button 
+          type="button" 
+          id="mobile-proceed-payment-btn"
+          onclick="if (pos.cart.length > 0) setRoute('payment-method')"
+          class="h-10 px-4 bg-primary hover:bg-primary/90 text-on-primary rounded-xl font-headline-md text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all ${itemCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}"
+          ${itemCount === 0 ? 'disabled' : ''}
+        >
+          <span class="tracking-wide font-bold">Proceed</span>
+          <div class="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-xs">
+            <span class="material-symbols-outlined text-white text-[14px]">arrow_forward</span>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Desktop Persistent Bottom Action Bar (Sleek 76px, Appears only when cart has items) -->
+    <div id="pos-bottom-bar" class="hidden lg:flex absolute bottom-0 left-0 w-full h-[76px] bg-surface-container-highest shadow-[0_-4px_16px_rgba(0,0,0,0.1)] items-center justify-between px-6 z-40 border-t border-outline-variant/30 ${itemCount > 0 ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-full opacity-0 pointer-events-none'}">
       <div class="flex items-center gap-5">
         <button 
           id="bar-clear-btn"
@@ -2543,6 +2721,7 @@ function renderDashboardView() {
         </button>
         <button 
           id="proceed-payment-btn"
+          onclick="if (pos.cart.length > 0) setRoute('payment-method')"
           class="h-12 min-w-[240px] bg-primary text-on-primary rounded-xl flex items-center justify-between px-5 shadow-md hover:shadow-lg hover:bg-primary/90 transition-all active:scale-[0.98] ${itemCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}"
           ${itemCount === 0 ? 'disabled' : ''}
         >
@@ -2596,13 +2775,13 @@ function renderAnalyticsView() {
   });
 
   return `
-  <div class="flex flex-col w-full h-[calc(100vh-64px)] p-margin-edge overflow-y-auto animate-screen-enter select-none">
+  <div class="flex flex-col w-full h-[calc(100vh-64px)] p-3 sm:p-margin-edge pb-24 md:pb-6 overflow-y-auto animate-screen-enter select-none">
     
     <!-- Top Action & Title Bar -->
-    <div class="flex items-center justify-between mb-5 shrink-0">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5 shrink-0">
       <div class="flex items-center gap-3">
-        <h1 class="font-headline-lg text-headline-lg text-on-surface font-bold flex items-center gap-2">
-          <span class="material-symbols-outlined text-primary text-[28px]">query_stats</span>
+        <h1 class="font-headline-lg text-lg sm:text-headline-lg text-on-surface font-bold flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[24px] sm:text-[28px]">query_stats</span>
           Business Performance & Earnings Dashboard
         </h1>
         <span class="font-label-bold text-xs bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full font-bold">
@@ -2610,10 +2789,10 @@ function renderAnalyticsView() {
         </span>
       </div>
 
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-3 w-full sm:w-auto">
         <button 
           onclick="openInvestmentModal()"
-          class="h-11 px-5 rounded-xl bg-primary text-on-primary font-label-bold flex items-center gap-2 shadow-md hover:bg-primary/90 transition-all active:scale-95"
+          class="h-11 px-5 w-full sm:w-auto rounded-xl bg-primary text-on-primary font-label-bold flex items-center justify-center gap-2 shadow-md hover:bg-primary/90 transition-all active:scale-95"
         >
           <span class="material-symbols-outlined text-[20px]">add_circle</span>
           + Log Investment / Expense
@@ -2622,7 +2801,7 @@ function renderAnalyticsView() {
     </div>
 
     <!-- 4 Key Financial Summary Cards -->
-    <div class="grid grid-cols-4 gap-4 mb-5 shrink-0">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5 shrink-0">
       
       <!-- Card 1: Total Gross Earnings -->
       <div class="p-4 rounded-2xl bg-surface-container-lowest shadow-sm border border-outline-variant/30 flex flex-col justify-between">
@@ -2694,10 +2873,10 @@ function renderAnalyticsView() {
     </div>
 
     <!-- Main Content Split: Left (60%) Investments & Financial Audit | Right (40%) Sales Breakdowns -->
-    <div class="grid grid-cols-12 gap-5 pb-6">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 pb-6">
       
       <!-- Left Column (7/12) -->
-      <div class="col-span-7 flex flex-col gap-5">
+      <div class="col-span-1 lg:col-span-7 flex flex-col gap-5">
         
         <!-- Section: Investment & Capital Tracker with Edit & Delete -->
         <div class="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant/30 flex flex-col">
@@ -2791,7 +2970,7 @@ function renderAnalyticsView() {
       </div>
 
       <!-- Right Column (5/12) Visual Breakdowns -->
-      <div class="col-span-5 flex flex-col gap-5">
+      <div class="col-span-1 lg:col-span-5 flex flex-col gap-5">
         
         <!-- Payment Mode Breakdown -->
         <div class="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant/30 flex flex-col">
@@ -3010,11 +3189,11 @@ function renderProductsManagerView() {
   });
 
   return `
-  <div class="flex flex-col w-full h-[calc(100vh-64px)] p-margin-edge overflow-hidden animate-screen-enter">
-    <div class="flex items-center justify-between mb-4 shrink-0">
+  <div class="flex flex-col w-full h-[calc(100vh-64px)] p-3 sm:p-margin-edge pb-24 md:pb-6 overflow-hidden animate-screen-enter">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 shrink-0">
       <div class="flex items-center gap-3">
-        <h1 class="font-headline-lg text-headline-lg text-on-surface font-bold flex items-center gap-2">
-          <span class="material-symbols-outlined text-primary text-[28px]">inventory_2</span>
+        <h1 class="font-headline-lg text-lg sm:text-headline-lg text-on-surface font-bold flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[24px] sm:text-[28px]">inventory_2</span>
           Product Catalog & Menu Manager
         </h1>
         <span id="pm-total-count-badge" class="font-label-bold text-xs bg-primary-fixed text-on-primary-fixed px-3 py-1 rounded-full">
@@ -3022,26 +3201,26 @@ function renderProductsManagerView() {
         </span>
       </div>
 
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 w-full sm:w-auto">
         <button 
           onclick="openAddCategoryModal()"
-          class="h-11 px-4 rounded-xl border border-outline-variant bg-surface text-on-surface font-label-bold flex items-center gap-2 hover:bg-surface-container transition-colors active:scale-95"
+          class="flex-1 sm:flex-none h-11 px-3 sm:px-4 rounded-xl border border-outline-variant bg-surface text-on-surface font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-surface-container transition-colors active:scale-95"
         >
           <span class="material-symbols-outlined text-[18px]">category</span>
           New Category
         </button>
         <button 
           onclick="openProductModal()"
-          class="h-11 px-5 rounded-xl bg-primary text-on-primary font-label-bold flex items-center gap-2 shadow-md hover:bg-primary/90 transition-all active:scale-95"
+          class="flex-1 sm:flex-none h-11 px-3.5 sm:px-5 rounded-xl bg-primary text-on-primary font-label-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md hover:bg-primary/90 transition-all active:scale-95"
         >
-          <span class="material-symbols-outlined text-[20px]">add_a_photo</span>
-          Add Product / Photo
+          <span class="material-symbols-outlined text-[18px] sm:text-[20px]">add_a_photo</span>
+          Add Product
         </button>
       </div>
     </div>
 
-    <div class="flex items-center justify-between gap-4 mb-4 shrink-0 bg-surface-container-low p-3 rounded-2xl border border-outline-variant/30">
-      <div class="relative w-80">
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4 shrink-0 bg-surface-container-low p-3 rounded-2xl border border-outline-variant/30">
+      <div class="relative w-full sm:w-80">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-on-surface-variant">
           <span class="material-symbols-outlined text-[18px]">search</span>
         </div>
@@ -3054,7 +3233,7 @@ function renderProductsManagerView() {
         />
       </div>
 
-      <div id="pm-category-chips-container" class="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1 max-w-[60%]">
+      <div id="pm-category-chips-container" class="flex items-center gap-2 overflow-x-auto no-scrollbar w-full sm:max-w-[60%] pb-1 sm:pb-0">
         ${pos.categories.map(cat => `
           <button 
             class="pm-cat-chip shrink-0 h-9 px-3.5 rounded-xl text-xs font-label-bold transition-all ${pos.productManagerFilter === cat ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface text-on-surface hover:bg-surface-container-high border border-outline-variant/30'}"
@@ -3066,8 +3245,8 @@ function renderProductsManagerView() {
       </div>
     </div>
 
-    <div class="flex-1 overflow-y-auto rounded-2xl bg-surface-container-low p-4 border border-outline-variant/30">
-      <div id="pm-products-grid" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+    <div class="flex-1 overflow-y-auto rounded-2xl bg-surface-container-low p-3 sm:p-4 border border-outline-variant/30">
+      <div id="pm-products-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3.5 sm:gap-4">
         ${filteredProducts.length === 0 ? `
           ${pos.products.length === 0 ? `
             <div class="col-span-full py-16 flex flex-col items-center justify-center text-center text-on-surface-variant gap-3 bg-surface-container-lowest rounded-2xl border-2 border-dashed border-outline-variant/40 p-8 my-auto">
@@ -3203,35 +3382,35 @@ function renderPaymentMethodView() {
   const ticketNum = Math.floor(1000 + Math.random() * 9000);
 
   return `
-  <div class="flex flex-col w-full h-full relative p-margin-edge pb-[104px] animate-screen-enter select-none">
-    <div class="flex flex-row w-full h-full gap-margin-edge">
-      <section class="flex flex-col flex-[65] gap-stack-lg animate-fade-in-up">
-        <div class="flex items-center gap-stack-md">
+  <div class="flex flex-col w-full h-[calc(100vh-64px)] overflow-y-auto p-3 sm:p-margin-edge pb-24 md:pb-12 animate-screen-enter select-none">
+    <div class="flex flex-col lg:flex-row w-full gap-4 sm:gap-margin-edge">
+      <section class="flex flex-col flex-1 lg:flex-[65] gap-4 sm:gap-stack-lg animate-fade-in-up">
+        <div class="flex items-center gap-3 sm:gap-stack-md">
           <button 
             id="pay-back-dashboard-btn"
-            class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors shadow-sm active:scale-95"
+            class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-surface-container flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors shadow-sm active:scale-95 shrink-0"
           >
             <span class="material-symbols-outlined">arrow_back</span>
           </button>
           <div class="flex flex-col">
-            <span class="font-label-sm text-label-sm text-primary uppercase tracking-wider mb-1">Step 2 of 3</span>
-            <h1 class="font-headline-lg text-headline-lg text-on-surface m-0 font-bold">Select Payment Method</h1>
+            <span class="font-label-sm text-xs sm:text-label-sm text-primary uppercase tracking-wider mb-0.5">Step 2 of 3</span>
+            <h1 class="font-headline-lg text-lg sm:text-headline-lg text-on-surface m-0 font-bold">Select Payment Method</h1>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-gutter flex-1">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-gutter flex-1">
           <button 
             id="select-cash-pay-btn"
-            class="group relative flex flex-col items-start p-margin-edge rounded-2xl bg-surface-container-low shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden min-h-[220px] text-left border-2 border-transparent hover:border-primary hover:bg-surface-container-high active:scale-[0.99]"
+            class="group relative flex flex-col items-start p-4 sm:p-margin-edge rounded-2xl bg-surface-container-low shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden min-h-[150px] sm:min-h-[220px] text-left border-2 border-transparent hover:border-primary hover:bg-surface-container-high active:scale-[0.99]"
           >
             <div class="absolute top-0 right-0 w-32 h-32 bg-secondary-fixed/20 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
-            <div class="w-16 h-16 rounded-2xl bg-secondary-container text-on-secondary-container flex items-center justify-center mb-auto shadow-sm">
-              <span class="material-symbols-outlined text-[36px] text-on-secondary-container">payments</span>
+            <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-secondary-container text-on-secondary-container flex items-center justify-center mb-auto shadow-sm">
+              <span class="material-symbols-outlined text-[28px] sm:text-[36px] text-on-secondary-container">payments</span>
             </div>
-            <div class="mt-stack-lg z-10 w-full">
-              <h2 class="font-headline-md text-headline-md text-on-surface mb-1 font-bold">Cash (रुपये)</h2>
-              <p class="font-body-md text-body-md text-on-surface-variant opacity-80">Exact change or cash tender.</p>
-              <div class="w-full h-1 bg-outline-variant/30 mt-3 rounded-full overflow-hidden">
+            <div class="mt-4 sm:mt-stack-lg z-10 w-full">
+              <h2 class="font-headline-md text-base sm:text-headline-md text-on-surface mb-0.5 sm:mb-1 font-bold">Cash (रुपये)</h2>
+              <p class="font-body-md text-xs sm:text-body-md text-on-surface-variant opacity-80">Exact change or cash tender.</p>
+              <div class="w-full h-1 bg-outline-variant/30 mt-2.5 sm:mt-3 rounded-full overflow-hidden">
                 <div class="w-0 h-full bg-primary group-hover:w-full transition-all duration-500 ease-in-out"></div>
               </div>
             </div>
@@ -3239,20 +3418,20 @@ function renderPaymentMethodView() {
 
           <button 
             id="select-digital-pay-btn"
-            class="group relative flex flex-col items-start p-margin-edge rounded-2xl bg-surface-container shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden min-h-[220px] text-left border-2 border-transparent hover:border-primary active:scale-[0.99]"
+            class="group relative flex flex-col items-start p-4 sm:p-margin-edge rounded-2xl bg-surface-container shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden min-h-[150px] sm:min-h-[220px] text-left border-2 border-transparent hover:border-primary active:scale-[0.99]"
           >
             <div class="absolute top-0 right-0 w-32 h-32 bg-primary-fixed/30 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
-            <div class="w-16 h-16 rounded-2xl bg-primary-container text-on-primary-container flex items-center justify-center mb-auto shadow-sm">
-              <span class="material-symbols-outlined text-[36px] text-on-primary-container">qr_code_scanner</span>
+            <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-primary-container text-on-primary-container flex items-center justify-center mb-auto shadow-sm">
+              <span class="material-symbols-outlined text-[28px] sm:text-[36px] text-on-primary-container">qr_code_scanner</span>
             </div>
-            <div class="mt-stack-lg z-10 w-full">
-              <h2 class="font-headline-md text-headline-md text-on-surface mb-1 font-bold">UPI, QR & Card</h2>
-              <div class="flex gap-2 mb-1 text-on-surface-variant">
-                <span class="material-symbols-outlined text-[20px]">contactless</span>
-                <span class="material-symbols-outlined text-[20px]">qr_code_2</span>
+            <div class="mt-4 sm:mt-stack-lg z-10 w-full">
+              <h2 class="font-headline-md text-base sm:text-headline-md text-on-surface mb-0.5 sm:mb-1 font-bold">UPI, QR & Card</h2>
+              <div class="flex gap-2 mb-0.5 sm:mb-1 text-on-surface-variant">
+                <span class="material-symbols-outlined text-[18px] sm:text-[20px]">contactless</span>
+                <span class="material-symbols-outlined text-[18px] sm:text-[20px]">qr_code_2</span>
               </div>
-              <p class="font-body-md text-body-md text-on-surface-variant opacity-80">GPay, PhonePe, Paytm, or EMV Cards.</p>
-              <div class="w-full h-1 bg-outline-variant/30 mt-3 rounded-full overflow-hidden">
+              <p class="font-body-md text-xs sm:text-body-md text-on-surface-variant opacity-80">GPay, PhonePe, Paytm, or EMV Cards.</p>
+              <div class="w-full h-1 bg-outline-variant/30 mt-2.5 sm:mt-3 rounded-full overflow-hidden">
                 <div class="w-0 h-full bg-primary group-hover:w-full transition-all duration-500 ease-in-out"></div>
               </div>
             </div>
@@ -3260,68 +3439,68 @@ function renderPaymentMethodView() {
 
           <button 
             id="select-split-pay-btn"
-            class="group relative flex flex-col items-start p-margin-edge rounded-2xl bg-surface-container-high shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden min-h-[190px] text-left border-2 border-transparent hover:border-primary col-span-2 active:scale-[0.99]"
+            class="group relative flex flex-col items-start p-4 sm:p-margin-edge rounded-2xl bg-surface-container-high shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden min-h-[130px] sm:min-h-[190px] text-left border-2 border-transparent hover:border-primary col-span-1 sm:col-span-2 active:scale-[0.99]"
           >
             <div class="absolute top-0 right-0 w-64 h-full bg-tertiary-container/10 skew-x-[-20deg] transition-transform group-hover:translate-x-8"></div>
             <div class="flex w-full justify-between items-start mb-auto">
-              <div class="w-16 h-16 rounded-2xl bg-tertiary-container text-on-tertiary-container flex items-center justify-center shadow-sm">
-                <span class="material-symbols-outlined text-[36px] text-on-tertiary-container">call_split</span>
+              <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-tertiary-container text-on-tertiary-container flex items-center justify-center shadow-sm">
+                <span class="material-symbols-outlined text-[28px] sm:text-[36px] text-on-tertiary-container">call_split</span>
               </div>
               <div class="flex items-center gap-2 opacity-60">
-                <span class="material-symbols-outlined text-[20px] text-on-surface">payments</span>
+                <span class="material-symbols-outlined text-[18px] sm:text-[20px] text-on-surface">payments</span>
                 <div class="w-4 h-[2px] bg-outline-variant"></div>
-                <span class="material-symbols-outlined text-[20px] text-on-surface">qr_code_2</span>
+                <span class="material-symbols-outlined text-[18px] sm:text-[20px] text-on-surface">qr_code_2</span>
               </div>
             </div>
-            <div class="mt-stack-md z-10 w-full flex justify-between items-end">
+            <div class="mt-3 sm:mt-stack-md z-10 w-full flex justify-between items-end">
               <div>
-                <h2 class="font-headline-md text-headline-md text-on-surface mb-1 font-bold">Split Payment</h2>
-                <p class="font-body-md text-body-md text-on-surface-variant opacity-80 max-w-[70%]">Combine cash and UPI/cards for this transaction.</p>
+                <h2 class="font-headline-md text-base sm:text-headline-md text-on-surface mb-0.5 sm:mb-1 font-bold">Split Payment</h2>
+                <p class="font-body-md text-xs sm:text-body-md text-on-surface-variant opacity-80 max-w-[85%] sm:max-w-[70%]">Combine cash and UPI/cards for this transaction.</p>
               </div>
-              <span class="material-symbols-outlined text-primary text-[32px] transform group-hover:translate-x-2 transition-transform">arrow_forward</span>
+              <span class="material-symbols-outlined text-primary text-[26px] sm:text-[32px] transform group-hover:translate-x-2 transition-transform">arrow_forward</span>
             </div>
           </button>
         </div>
       </section>
 
-      <aside class="flex flex-col flex-[35] bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden animate-slide-right border border-outline-variant/30">
-        <div class="bg-surface-container p-margin-edge flex justify-between items-center relative overflow-hidden border-b border-outline-variant/30">
+      <aside class="flex flex-col w-full lg:w-auto lg:flex-[35] bg-surface-container-lowest rounded-2xl shadow-sm lg:shadow-xl overflow-hidden animate-slide-right border border-outline-variant/30 shrink-0">
+        <div class="bg-surface-container p-3 sm:p-margin-edge flex justify-between items-center relative overflow-hidden border-b border-outline-variant/30">
           <div>
-            <h3 class="font-label-bold text-label-bold text-on-surface uppercase tracking-wider mb-1">Current Order</h3>
-            <p class="font-label-sm text-label-sm text-on-surface-variant">Ticket #${ticketNum}</p>
+            <h3 class="font-label-bold text-xs sm:text-label-bold text-on-surface uppercase tracking-wider mb-0.5">Current Order</h3>
+            <p class="font-label-sm text-xs text-on-surface-variant">Ticket #${ticketNum}</p>
           </div>
-          <div class="w-10 h-10 bg-surface rounded-full flex items-center justify-center shadow-sm">
-            <span class="material-symbols-outlined text-on-surface">receipt_long</span>
+          <div class="w-9 h-9 sm:w-10 sm:h-10 bg-surface rounded-full flex items-center justify-center shadow-sm">
+            <span class="material-symbols-outlined text-on-surface text-[20px]">receipt_long</span>
           </div>
         </div>
 
-        <div class="p-margin-edge flex-1 flex flex-col relative">
+        <div class="p-3 sm:p-margin-edge flex-1 flex flex-col relative">
           <div class="absolute top-0 left-0 w-full h-2 flex z-10 receipt-wave-edge"></div>
 
-          <div class="flex-1 space-y-stack-md mt-4 relative z-0 overflow-y-auto max-h-[calc(100vh-380px)] pr-1">
+          <div class="flex-1 space-y-2 sm:space-y-stack-md mt-4 relative z-0 overflow-y-auto max-h-56 lg:max-h-[calc(100vh-380px)] pr-1">
             ${pos.cart.map(item => `
-              <div class="flex justify-between items-start pb-stack-sm border-b border-outline-variant/30 border-dashed">
-                <div>
-                  <p class="font-body-md text-body-md text-on-surface font-semibold">${item.name}</p>
-                  <p class="font-label-sm text-label-sm text-on-surface-variant">${item.qty} x ${pos.settings.currency}${item.price.toFixed(2)} (${item.modifier || 'Standard'})</p>
+              <div class="flex justify-between items-start pb-2 sm:pb-stack-sm border-b border-outline-variant/30 border-dashed">
+                <div class="pr-2">
+                  <p class="font-body-md text-sm text-on-surface font-semibold">${item.name}</p>
+                  <p class="font-label-sm text-xs text-on-surface-variant">${item.qty} x ${pos.settings.currency}${item.price.toFixed(2)} (${item.modifier || 'Standard'})</p>
                 </div>
-                <p class="font-body-md text-body-md text-on-surface font-medium">${pos.settings.currency}${(item.price * item.qty).toFixed(2)}</p>
+                <p class="font-body-md text-sm text-on-surface font-medium shrink-0">${pos.settings.currency}${(item.price * item.qty).toFixed(2)}</p>
               </div>
             `).join('')}
           </div>
 
-          <div class="mt-auto pt-margin-edge">
-            <div class="flex justify-between items-center mb-1 text-on-surface-variant font-label-sm">
+          <div class="mt-auto pt-3 sm:pt-margin-edge">
+            <div class="flex justify-between items-center mb-1 text-on-surface-variant font-label-sm text-xs">
               <span>Subtotal</span>
               <span class="text-on-surface font-body-md font-semibold">${pos.settings.currency}${subtotal.toFixed(2)}</span>
             </div>
-            <div class="flex justify-between items-center mb-3 text-on-surface-variant font-label-sm">
+            <div class="flex justify-between items-center mb-2.5 sm:mb-3 text-on-surface-variant font-label-sm text-xs">
               <span>GST (${pos.settings.taxRate}%)</span>
               <span class="text-on-surface font-body-md font-semibold">${pos.settings.currency}${tax.toFixed(2)}</span>
             </div>
-            <div class="bg-primary text-on-primary rounded-2xl p-stack-md flex justify-between items-center relative overflow-hidden shadow-lg">
-              <span class="font-headline-lg text-headline-lg text-on-primary font-bold">Total</span>
-              <span class="font-display-price text-display-price text-on-primary font-bold">${pos.settings.currency}${total.toFixed(2)}</span>
+            <div class="bg-primary text-on-primary rounded-2xl p-3 sm:p-stack-md flex justify-between items-center relative overflow-hidden shadow-lg">
+              <span class="font-headline-lg text-lg sm:text-headline-lg text-on-primary font-bold">Total</span>
+              <span class="font-display-price text-2xl sm:text-display-price text-on-primary font-bold">${pos.settings.currency}${total.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -3353,88 +3532,88 @@ function renderCalculationView() {
   ];
 
   return `
-  <div class="flex flex-col w-full h-[calc(100vh-64px)] overflow-hidden bg-background animate-screen-enter select-none">
-    <div class="flex-1 flex flex-row p-margin-edge gap-margin-edge">
-      <div class="flex flex-col w-[60%] justify-between">
-        <div class="flex flex-col gap-stack-lg">
+  <div class="flex flex-col w-full h-[calc(100vh-64px)] overflow-y-auto bg-background animate-screen-enter select-none pb-24 lg:pb-0">
+    <div class="flex-1 flex flex-col lg:flex-row p-3 sm:p-margin-edge gap-4 sm:gap-margin-edge">
+      <div class="flex flex-col w-full lg:w-[60%] justify-between gap-4">
+        <div class="flex flex-col gap-3 sm:gap-stack-lg">
           <div class="flex flex-col gap-stack-sm">
-            <div class="flex items-center gap-gutter">
+            <div class="flex items-center gap-3">
               <button 
                 id="calc-back-btn"
-                class="w-touch-target-min h-touch-target-min flex items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high transition-colors active:scale-95"
+                class="w-10 h-10 sm:w-touch-target-min sm:h-touch-target-min flex items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high transition-colors active:scale-95 shrink-0"
               >
                 <span class="material-symbols-outlined">arrow_back</span>
               </button>
-              <h1 class="font-headline-lg text-headline-lg text-on-surface font-bold">Payment Details</h1>
+              <h1 class="font-headline-lg text-lg sm:text-headline-lg text-on-surface font-bold">Payment Details</h1>
             </div>
           </div>
 
-          <div class="flex flex-col gap-gutter bg-surface-container-low rounded-2xl p-stack-lg shadow-sm border border-outline-variant/30">
-            <div class="flex justify-between items-end pb-stack-md border-b-[1px] border-outline-variant/30">
-              <span class="font-body-lg text-body-lg text-on-surface-variant">Total Due</span>
-              <span class="font-display-price text-display-price text-on-surface font-bold">${pos.settings.currency}${total.toFixed(2)}</span>
+          <div class="flex flex-col gap-3 sm:gap-gutter bg-surface-container-low rounded-2xl p-4 sm:p-stack-lg shadow-sm border border-outline-variant/30">
+            <div class="flex justify-between items-end pb-3 sm:pb-stack-md border-b-[1px] border-outline-variant/30">
+              <span class="font-body-md sm:font-body-lg text-sm sm:text-body-lg text-on-surface-variant">Total Due</span>
+              <span class="font-display-price text-2xl sm:text-display-price text-on-surface font-bold">${pos.settings.currency}${total.toFixed(2)}</span>
             </div>
 
-            <div class="flex flex-col gap-stack-sm pt-stack-sm relative group">
-              <label class="font-label-bold text-label-bold text-on-surface-variant font-semibold">Cash Tendered</label>
+            <div class="flex flex-col gap-1.5 sm:gap-stack-sm pt-2 sm:pt-stack-sm relative group">
+              <label class="font-label-bold text-xs sm:text-label-bold text-on-surface-variant font-semibold">Cash Tendered</label>
               <div class="relative flex items-center">
-                <span class="absolute left-stack-md font-headline-lg text-headline-lg text-on-surface-variant">${pos.settings.currency}</span>
+                <span class="absolute left-3.5 sm:left-stack-md font-headline-lg text-lg sm:text-headline-lg text-on-surface-variant">${pos.settings.currency}</span>
                 <input 
                   id="amount-received-input"
-                  class="w-full h-[72px] pl-[48px] pr-touch-target-min bg-surface rounded-xl font-display-price text-[40px] leading-[48px] font-bold text-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-right cursor-default shadow-inner" 
+                  class="w-full h-[58px] sm:h-[72px] pl-[38px] sm:pl-[48px] pr-10 sm:pr-touch-target-min bg-surface rounded-xl font-display-price text-[28px] sm:text-[40px] leading-tight font-bold text-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-right cursor-default shadow-inner" 
                   readonly="" 
                   type="text" 
                   value="${pos.calcInput}"
                 />
                 <button 
                   id="calc-clear-input-btn"
-                  class="absolute right-stack-sm w-touch-target-min h-touch-target-min flex items-center justify-center text-on-surface-variant hover:text-error transition-colors rounded-full"
+                  class="absolute right-2 sm:right-stack-sm w-9 h-9 sm:w-touch-target-min sm:h-touch-target-min flex items-center justify-center text-on-surface-variant hover:text-error transition-colors rounded-full"
                 >
-                  <span class="material-symbols-outlined">cancel</span>
+                  <span class="material-symbols-outlined text-[20px]">cancel</span>
                 </button>
               </div>
             </div>
 
-            <div class="flex justify-between items-end pt-stack-md mt-stack-sm border-t-[1px] border-outline-variant/30">
-              <div class="flex items-center gap-stack-sm">
-                <span class="font-headline-md text-headline-md text-on-surface font-semibold">Change to Return</span>
+            <div class="flex justify-between items-end pt-3 sm:pt-stack-md mt-1 sm:mt-stack-sm border-t-[1px] border-outline-variant/30">
+              <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-stack-sm">
+                <span class="font-headline-md text-sm sm:text-headline-md text-on-surface font-semibold">Change to Return</span>
                 <div id="calc-change-badge-container">
                   ${change >= 0 ? `
-                    <div class="h-6 px-3 rounded-full bg-secondary-container flex items-center justify-center">
-                      <span class="font-label-sm text-xs text-on-secondary-container font-bold">Due to Customer</span>
+                    <div class="h-5 sm:h-6 px-2.5 sm:px-3 rounded-full bg-secondary-container flex items-center justify-center">
+                      <span class="font-label-sm text-[11px] sm:text-xs text-on-secondary-container font-bold">Due to Customer</span>
                     </div>
                   ` : `
-                    <div class="h-6 px-3 rounded-full bg-error-container flex items-center justify-center">
-                      <span class="font-label-sm text-xs text-on-error-container font-bold">Insufficient Amount</span>
+                    <div class="h-5 sm:h-6 px-2.5 sm:px-3 rounded-full bg-error-container flex items-center justify-center">
+                      <span class="font-label-sm text-[11px] sm:text-xs text-on-error-container font-bold">Insufficient</span>
                     </div>
                   `}
                 </div>
               </div>
-              <span id="calc-change-display" class="font-display-price text-[54px] leading-tight font-bold ${change >= 0 ? 'text-secondary' : 'text-error'}">
+              <span id="calc-change-display" class="font-display-price text-[32px] sm:text-[54px] leading-tight font-bold ${change >= 0 ? 'text-secondary' : 'text-error'}">
                 ${change >= 0 ? `${pos.settings.currency}${change.toFixed(2)}` : `-${pos.settings.currency}${Math.abs(change).toFixed(2)}`}
               </span>
             </div>
           </div>
         </div>
 
-        <div class="flex-1 mt-stack-md relative overflow-hidden rounded-2xl bg-surface-container-lowest shadow-sm flex items-center justify-center border border-outline-variant/30">
+        <div class="hidden sm:flex flex-1 mt-stack-md relative overflow-hidden rounded-2xl bg-surface-container-lowest shadow-sm items-center justify-center border border-outline-variant/30">
           <div class="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5"></div>
           <div class="relative flex flex-col items-center gap-2 text-center p-stack-md z-10">
-            <div class="w-14 h-14 rounded-full bg-primary-container flex items-center justify-center shadow-md">
-              <span class="material-symbols-outlined text-[28px] text-on-primary-container">point_of_sale</span>
+            <div class="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center shadow-md">
+              <span class="material-symbols-outlined text-[24px] text-on-primary-container">point_of_sale</span>
             </div>
-            <p class="font-body-md text-sm text-on-surface-variant max-w-[85%]">
+            <p class="font-body-md text-xs text-on-surface-variant max-w-[85%]">
               Verify exact change before confirming the transaction to maintain cash drawer balance.
             </p>
           </div>
         </div>
       </div>
 
-      <div class="flex flex-col w-[40%] gap-stack-md">
+      <div class="flex flex-col w-full lg:w-[40%] gap-3 sm:gap-stack-md">
         <div class="grid grid-cols-4 gap-2">
           ${quickAmounts.map(q => `
             <button 
-              class="quick-amt-btn h-13 py-3 rounded-xl bg-surface-container hover:bg-primary hover:text-on-primary font-headline-md text-sm font-bold text-on-surface transition-colors shadow-sm active:scale-95" 
+              class="quick-amt-btn h-11 sm:h-13 py-2 sm:py-3 rounded-xl bg-surface-container hover:bg-primary hover:text-on-primary font-headline-md text-xs sm:text-sm font-bold text-on-surface transition-colors shadow-sm active:scale-95" 
               data-val="${q.val}"
             >
               ${q.label}
@@ -3442,10 +3621,10 @@ function renderCalculationView() {
           `).join('')}
         </div>
 
-        <div class="flex-1 grid grid-cols-3 gap-2 bg-surface-container-low p-3 rounded-2xl shadow-sm border border-outline-variant/30">
+        <div class="grid grid-cols-3 gap-2 bg-surface-container-low p-2.5 sm:p-3 rounded-2xl shadow-sm border border-outline-variant/30">
           ${['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0'].map(num => `
             <button 
-              class="numpad-key-btn w-full h-full min-h-[64px] bg-surface rounded-xl font-headline-lg text-[26px] font-bold text-on-surface hover:bg-surface-variant hover:text-primary transition-all shadow-sm active:scale-95" 
+              class="numpad-key-btn w-full h-14 sm:h-full min-h-[52px] sm:min-h-[64px] bg-surface rounded-xl font-headline-lg text-2xl sm:text-[26px] font-bold text-on-surface hover:bg-surface-variant hover:text-primary transition-all shadow-sm active:scale-95" 
               data-val="${num}"
             >
               ${num}
@@ -3454,38 +3633,38 @@ function renderCalculationView() {
           
           <button 
             id="numpad-backspace-btn"
-            class="w-full h-full min-h-[64px] bg-surface-container rounded-xl flex items-center justify-center text-on-surface-variant hover:bg-error-container hover:text-on-error-container transition-all shadow-sm active:scale-95"
+            class="w-full h-14 sm:h-full min-h-[52px] sm:min-h-[64px] bg-surface-container rounded-xl flex items-center justify-center text-on-surface-variant hover:bg-error-container hover:text-on-error-container transition-all shadow-sm active:scale-95"
           >
-            <span class="material-symbols-outlined text-[28px]">backspace</span>
+            <span class="material-symbols-outlined text-[24px] sm:text-[28px]">backspace</span>
           </button>
         </div>
       </div>
     </div>
 
-    <div class="h-20 w-full bg-surface shadow-[0_-4px_16px_rgba(0,0,0,0.05)] px-margin-edge flex items-center justify-between shrink-0 z-20 border-t border-outline-variant/30">
-      <div class="flex items-center gap-stack-lg">
+    <div class="h-auto py-3 sm:h-20 w-full bg-surface shadow-[0_-4px_16px_rgba(0,0,0,0.05)] px-4 sm:px-margin-edge flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0 z-20 border-t border-outline-variant/30">
+      <div class="flex items-center justify-between sm:justify-start gap-4 sm:gap-stack-lg">
         <div class="flex flex-col">
-          <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Payment Method</span>
-          <div class="flex items-center gap-stack-sm mt-1">
-            <span class="material-symbols-outlined text-primary text-[20px]">payments</span>
-            <span class="font-headline-md text-headline-md text-on-surface font-bold">Cash (₹)</span>
+          <span class="font-label-sm text-[10px] sm:text-label-sm text-on-surface-variant uppercase tracking-wider">Method</span>
+          <div class="flex items-center gap-1.5 mt-0.5">
+            <span class="material-symbols-outlined text-primary text-[18px]">payments</span>
+            <span class="font-headline-md text-sm sm:text-headline-md text-on-surface font-bold">Cash (₹)</span>
           </div>
         </div>
-        <div class="w-[1px] h-10 bg-outline-variant/50"></div>
+        <div class="w-[1px] h-8 bg-outline-variant/50"></div>
         <div class="flex flex-col">
-          <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Drawer Status</span>
-          <span class="font-body-md text-body-md text-secondary mt-1 flex items-center gap-1 font-bold">
-            <span class="material-symbols-outlined text-[16px] text-secondary">check_circle</span> Open & Ready
+          <span class="font-label-sm text-[10px] sm:text-label-sm text-on-surface-variant uppercase tracking-wider">Cash Drawer</span>
+          <span class="font-body-md text-xs sm:text-body-md text-secondary mt-0.5 flex items-center gap-1 font-bold">
+            <span class="material-symbols-outlined text-[15px] text-secondary">check_circle</span> Open & Ready
           </span>
         </div>
       </div>
 
       <button 
         id="confirm-cash-payment-btn"
-        class="w-[40%] h-[56px] bg-primary hover:bg-primary/90 text-on-primary rounded-xl font-headline-lg text-headline-lg flex items-center justify-center gap-stack-sm shadow-md transition-all active:scale-[0.98] ${change < 0 ? 'opacity-50 cursor-not-allowed' : ''}"
+        class="w-full sm:w-[40%] h-[50px] sm:h-[56px] bg-primary hover:bg-primary/90 text-on-primary rounded-xl font-headline-md sm:font-headline-lg text-base sm:text-headline-lg flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98] ${change < 0 ? 'opacity-50 cursor-not-allowed' : ''}"
         ${change < 0 ? 'disabled' : ''}
       >
-        <span class="material-symbols-outlined text-[24px]">task_alt</span>
+        <span class="material-symbols-outlined text-[20px] sm:text-[24px]">task_alt</span>
         Confirm Payment
       </button>
     </div>
@@ -3510,104 +3689,104 @@ function renderConfirmationView() {
   };
 
   return `
-  <div class="flex flex-col w-full h-[calc(100vh-64px)] animate-screen-enter select-none">
-    <div class="flex flex-row w-full flex-1 relative overflow-hidden">
-      <div class="w-[35%] flex flex-col bg-surface-container-lowest shadow-2xl z-20 relative border-r border-outline-variant/30">
+  <div class="flex flex-col w-full h-[calc(100vh-64px)] overflow-y-auto pb-24 md:pb-6 animate-screen-enter select-none">
+    <div class="flex flex-col-reverse lg:flex-row w-full flex-1 relative">
+      <div class="w-full lg:w-[35%] flex flex-col bg-surface-container-lowest shadow-lg lg:shadow-2xl z-20 relative border-t lg:border-t-0 lg:border-r border-outline-variant/30 shrink-0">
         <div class="h-2 w-full bg-primary"></div>
-        <div class="flex flex-col flex-1 p-margin-edge overflow-y-auto">
-          <div class="flex items-center justify-between mb-stack-lg">
+        <div class="flex flex-col flex-1 p-4 sm:p-margin-edge">
+          <div class="flex items-center justify-between mb-3 sm:mb-stack-lg">
             <div class="flex flex-col">
-              <span class="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider">Receipt</span>
-              <span class="font-headline-md text-headline-md text-on-surface font-bold">#${activeOrder.receiptNumber}</span>
+              <span class="font-label-bold text-xs sm:text-label-bold text-on-surface-variant uppercase tracking-wider">Receipt</span>
+              <span class="font-headline-md text-base sm:text-headline-md text-on-surface font-bold">#${activeOrder.receiptNumber}</span>
             </div>
-            <div class="h-10 w-10 rounded-full bg-surface-container flex items-center justify-center">
-              <span class="material-symbols-outlined text-on-surface-variant">receipt_long</span>
+            <div class="h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-surface-container flex items-center justify-center">
+              <span class="material-symbols-outlined text-on-surface-variant text-[20px]">receipt_long</span>
             </div>
           </div>
 
-          <div class="flex flex-col gap-3 flex-1 overflow-y-auto max-h-[calc(100vh-360px)] pr-1">
+          <div class="flex flex-col gap-2.5 sm:gap-3 flex-1 overflow-y-auto max-h-56 lg:max-h-[calc(100vh-360px)] pr-1">
             ${activeOrder.items.map(item => `
-              <div class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface-container-low transition-colors border border-outline-variant/20">
-                <div class="w-11 h-11 rounded-lg bg-surface-variant overflow-hidden flex-shrink-0 flex items-center justify-center">
-                  <span class="material-symbols-outlined text-primary text-[22px]">coffee</span>
+              <div class="flex items-center gap-2.5 sm:gap-3 p-2 sm:p-2.5 rounded-xl hover:bg-surface-container-low transition-colors border border-outline-variant/20">
+                <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-lg bg-surface-variant overflow-hidden flex-shrink-0 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-primary text-[18px] sm:text-[22px]">coffee</span>
                 </div>
                 <div class="flex flex-col flex-1 min-w-0">
-                  <span class="font-body-md text-sm text-on-surface font-bold truncate">${item.name}</span>
-                  <span class="font-label-sm text-xs text-on-surface-variant">Qty: ${item.qty} · ${item.modifier || 'Standard'}</span>
+                  <span class="font-body-md text-xs sm:text-sm text-on-surface font-bold truncate">${item.name}</span>
+                  <span class="font-label-sm text-[11px] sm:text-xs text-on-surface-variant">Qty: ${item.qty} · ${item.modifier || 'Standard'}</span>
                 </div>
-                <span class="font-label-bold text-sm font-bold text-on-surface">${pos.settings.currency}${(item.price * item.qty).toFixed(2)}</span>
+                <span class="font-label-bold text-xs sm:text-sm font-bold text-on-surface">${pos.settings.currency}${(item.price * item.qty).toFixed(2)}</span>
               </div>
             `).join('')}
           </div>
 
-          <div class="mt-stack-lg pt-gutter flex flex-col gap-1.5 relative border-t border-outline-variant/30">
-            <div class="flex justify-between items-center text-sm">
+          <div class="mt-4 sm:mt-stack-lg pt-3 sm:pt-gutter flex flex-col gap-1.5 relative border-t border-outline-variant/30">
+            <div class="flex justify-between items-center text-xs sm:text-sm">
               <span class="text-on-surface-variant">Subtotal</span>
               <span class="font-bold text-on-surface">${pos.settings.currency}${activeOrder.subtotal.toFixed(2)}</span>
             </div>
-            <div class="flex justify-between items-center text-sm">
+            <div class="flex justify-between items-center text-xs sm:text-sm">
               <span class="text-on-surface-variant">GST (${activeOrder.taxRate || pos.settings.taxRate}%)</span>
               <span class="font-bold text-on-surface">${pos.settings.currency}${activeOrder.tax.toFixed(2)}</span>
             </div>
-            <div class="flex justify-between items-center mt-2 pt-2 border-t border-outline-variant/30">
-              <span class="font-headline-md text-headline-md text-on-surface font-bold">Total</span>
-              <span class="font-headline-md text-headline-md text-primary font-bold">${pos.settings.currency}${activeOrder.total.toFixed(2)}</span>
+            <div class="flex justify-between items-center mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-outline-variant/30">
+              <span class="font-headline-md text-sm sm:text-headline-md text-on-surface font-bold">Total</span>
+              <span class="font-headline-md text-base sm:text-headline-md text-primary font-bold">${pos.settings.currency}${activeOrder.total.toFixed(2)}</span>
             </div>
-            <div class="mt-3 flex items-center justify-center gap-2 px-3 py-2 bg-secondary-container/20 rounded-xl">
-              <span class="material-symbols-outlined text-secondary text-[18px]">credit_card</span>
-              <span class="font-label-sm text-xs text-on-secondary-container font-bold">Paid via ${activeOrder.paymentMethod}</span>
+            <div class="mt-2.5 sm:mt-3 flex items-center justify-center gap-2 px-3 py-2 bg-secondary-container/20 rounded-xl">
+              <span class="material-symbols-outlined text-secondary text-[16px] sm:text-[18px]">credit_card</span>
+              <span class="font-label-sm text-[11px] sm:text-xs text-on-secondary-container font-bold">Paid via ${activeOrder.paymentMethod}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="w-[65%] flex flex-col items-center justify-center p-stack-lg relative bg-surface">
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-secondary-container/30 rounded-full blur-[100px] pointer-events-none"></div>
+      <div class="w-full lg:w-[65%] flex flex-col items-center justify-center p-4 sm:p-stack-lg relative bg-surface py-8 lg:py-12">
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 sm:w-96 h-72 sm:h-96 bg-secondary-container/30 rounded-full blur-[100px] pointer-events-none"></div>
 
-        <div class="relative z-10 flex flex-col items-center text-center animate-fade-in-up max-w-lg">
-          <div class="relative w-28 h-28 mb-4 flex items-center justify-center">
+        <div class="relative z-10 flex flex-col items-center text-center animate-fade-in-up max-w-lg w-full">
+          <div class="relative w-20 h-20 sm:w-28 sm:h-28 mb-3 sm:mb-4 flex items-center justify-center">
             <div class="absolute inset-0 bg-secondary-container rounded-full animate-ping-custom opacity-20"></div>
             <div class="absolute inset-0 bg-secondary-container/50 rounded-full scale-75 animate-pulse-slow"></div>
-            <div class="relative z-10 w-20 h-20 bg-secondary rounded-full flex items-center justify-center shadow-xl shadow-secondary/30">
-              <span class="material-symbols-outlined text-on-secondary text-[40px] font-bold">check</span>
+            <div class="relative z-10 w-16 h-16 sm:w-20 sm:h-20 bg-secondary rounded-full flex items-center justify-center shadow-xl shadow-secondary/30">
+              <span class="material-symbols-outlined text-on-secondary text-[32px] sm:text-[40px] font-bold">check</span>
             </div>
           </div>
 
-          <h1 class="font-display-price text-[36px] font-bold text-on-surface mb-2">Order Confirmed!</h1>
-          <p class="font-body-md text-sm text-on-surface-variant max-w-md mb-6">
+          <h1 class="font-display-price text-2xl sm:text-[36px] font-bold text-on-surface mb-1.5 sm:mb-2">Order Confirmed!</h1>
+          <p class="font-body-md text-xs sm:text-sm text-on-surface-variant max-w-md mb-4 sm:mb-6">
             Transaction successfully processed. The digital receipt has been logged.
           </p>
 
-          <div class="flex flex-row items-center gap-3 w-full">
+          <div class="flex flex-col sm:flex-row items-center gap-2.5 sm:gap-3 w-full">
             <button 
               id="confirm-print-receipt-btn"
-              class="flex-1 h-14 flex items-center justify-center gap-2 bg-surface-variant text-on-surface rounded-xl hover:bg-surface-container-highest hover:shadow-md transition-all active:scale-95 font-bold"
+              class="w-full sm:flex-1 h-12 sm:h-14 flex items-center justify-center gap-2 bg-surface-variant text-on-surface rounded-xl hover:bg-surface-container-highest hover:shadow-md transition-all active:scale-95 font-bold text-sm"
             >
-              <span class="material-symbols-outlined">print</span>
+              <span class="material-symbols-outlined text-[18px]">print</span>
               <span>Print Receipt</span>
             </button>
             <button 
               id="confirm-new-order-btn"
-              class="flex-1 h-14 flex items-center justify-center gap-2 bg-primary text-on-primary rounded-xl shadow-lg shadow-primary/20 hover:bg-primary-fixed-variant hover:shadow-xl transition-all active:scale-95 font-bold"
+              class="w-full sm:flex-1 h-12 sm:h-14 flex items-center justify-center gap-2 bg-primary text-on-primary rounded-xl shadow-lg shadow-primary/20 hover:bg-primary-fixed-variant hover:shadow-xl transition-all active:scale-95 font-bold text-sm"
             >
-              <span class="material-symbols-outlined">add_circle</span>
+              <span class="material-symbols-outlined text-[18px]">add_circle</span>
               <span>New Order</span>
             </button>
           </div>
 
-          <div class="mt-4 w-full bg-surface-container-lowest p-2 rounded-xl shadow-sm flex items-center gap-2 border border-outline-variant/30">
-            <div class="flex items-center justify-center w-9 h-9 bg-surface-container rounded-lg text-on-surface-variant">
+          <div class="mt-3 sm:mt-4 w-full bg-surface-container-lowest p-2 rounded-xl shadow-sm flex items-center gap-2 border border-outline-variant/30">
+            <div class="flex items-center justify-center w-9 h-9 bg-surface-container rounded-lg text-on-surface-variant shrink-0">
               <span class="material-symbols-outlined text-[18px]">mail</span>
             </div>
             <input 
               id="receipt-email-input"
-              class="flex-1 bg-transparent border-none outline-none font-body-md text-sm text-on-surface placeholder:text-outline" 
+              class="flex-1 bg-transparent border-none outline-none font-body-md text-xs sm:text-sm text-on-surface placeholder:text-outline" 
               placeholder="Email receipt to customer..." 
               type="email"
             />
             <button 
               id="send-email-receipt-btn"
-              class="h-9 px-4 flex items-center justify-center bg-inverse-surface text-inverse-on-surface rounded-lg hover:bg-on-surface transition-colors active:scale-95 font-label-bold text-xs"
+              class="h-9 px-3.5 sm:px-4 flex items-center justify-center bg-inverse-surface text-inverse-on-surface rounded-lg hover:bg-on-surface transition-colors active:scale-95 font-label-bold text-xs shrink-0"
             >
               Send
             </button>
@@ -3627,18 +3806,18 @@ function renderHistoryView() {
   const orders = pos.orders;
 
   return `
-  <div class="flex flex-col w-full h-[calc(100vh-64px)] p-margin-edge overflow-hidden animate-screen-enter select-none">
-    <div class="flex items-center justify-between mb-4">
+  <div class="flex flex-col w-full h-[calc(100vh-64px)] p-3 sm:p-margin-edge pb-24 md:pb-6 overflow-hidden animate-screen-enter select-none">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
       <div class="flex items-center gap-3">
-        <h1 class="font-headline-lg text-headline-lg text-on-surface font-bold">Order History & Receipts</h1>
+        <h1 class="font-headline-lg text-lg sm:text-headline-lg text-on-surface font-bold">Order History & Receipts</h1>
         <span class="font-label-bold text-xs bg-primary-fixed text-on-primary-fixed px-3 py-1 rounded-full">
-          ${orders.length} Transactions Saved
+          ${orders.length} Transactions
         </span>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 w-full sm:w-auto">
         <button 
           id="export-csv-btn"
-          class="h-11 px-4 rounded-xl bg-surface-container text-on-surface font-label-bold flex items-center gap-2 hover:bg-surface-variant transition-colors border border-outline-variant/30 text-xs"
+          class="flex-1 sm:flex-none h-10 sm:h-11 px-3 sm:px-4 rounded-xl bg-surface-container text-on-surface font-label-bold flex items-center justify-center gap-1.5 hover:bg-surface-variant transition-colors border border-outline-variant/30 text-xs"
         >
           <span class="material-symbols-outlined text-[18px]">download</span>
           Export CSV
@@ -3646,7 +3825,7 @@ function renderHistoryView() {
 
         <button 
           onclick="openDeleteOrderHistoryModal()"
-          class="h-11 px-4 rounded-xl bg-error/10 hover:bg-error hover:text-on-error text-error font-label-bold flex items-center gap-1.5 transition-all shadow-xs active:scale-95 text-xs"
+          class="flex-1 sm:flex-none h-10 sm:h-11 px-3 sm:px-4 rounded-xl bg-error/10 hover:bg-error hover:text-on-error text-error font-label-bold flex items-center justify-center gap-1.5 transition-all shadow-xs active:scale-95 text-xs"
           title="Delete or Clear Order History"
         >
           <span class="material-symbols-outlined text-[18px]">delete_sweep</span>
@@ -3657,51 +3836,51 @@ function renderHistoryView() {
 
     <div class="flex-1 bg-surface-container-low rounded-2xl shadow-sm overflow-hidden flex flex-col border border-outline-variant/30">
       ${orders.length === 0 ? `
-        <div class="flex flex-col items-center justify-center flex-1 text-on-surface-variant gap-2">
+        <div class="flex flex-col items-center justify-center flex-1 text-on-surface-variant gap-2 p-6">
           <span class="material-symbols-outlined text-[56px]">receipt_long</span>
-          <p class="font-headline-md font-bold">No completed orders yet</p>
-          <p class="font-body-md text-sm">Completed transactions will be saved locally here.</p>
+          <p class="font-headline-md font-bold text-sm sm:text-base">No completed orders yet</p>
+          <p class="font-body-md text-xs sm:text-sm text-center">Completed transactions will be saved locally here.</p>
         </div>
       ` : `
-        <div class="flex-1 overflow-y-auto">
-          <table class="w-full text-left border-collapse">
+        <div class="flex-1 overflow-auto">
+          <table class="w-full text-left border-collapse min-w-[620px]">
             <thead class="bg-surface-container sticky top-0 z-10 text-on-surface-variant font-label-bold text-xs uppercase tracking-wider">
               <tr>
-                <th class="p-4">Receipt #</th>
-                <th class="p-4">Date & Time</th>
-                <th class="p-4">Customer</th>
-                <th class="p-4">Items</th>
-                <th class="p-4">Payment</th>
-                <th class="p-4 text-right">Total (${pos.settings.currency})</th>
-                <th class="p-4 text-center">Actions</th>
+                <th class="p-3 sm:p-4">Receipt #</th>
+                <th class="p-3 sm:p-4">Date & Time</th>
+                <th class="p-3 sm:p-4">Customer</th>
+                <th class="p-3 sm:p-4">Items</th>
+                <th class="p-3 sm:p-4">Payment</th>
+                <th class="p-3 sm:p-4 text-right">Total (${pos.settings.currency})</th>
+                <th class="p-3 sm:p-4 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-outline-variant/30 text-on-surface font-body-md text-sm">
+            <tbody class="divide-y divide-outline-variant/30 text-on-surface font-body-md text-xs sm:text-sm">
               ${orders.map(order => `
                 <tr class="hover:bg-surface-container transition-colors">
-                  <td class="p-4 font-bold text-primary">${order.receiptNumber}</td>
-                  <td class="p-4 text-on-surface-variant text-xs">${order.displayDate}</td>
-                  <td class="p-4 font-semibold">${order.customer?.name || 'Walk-in'}</td>
-                  <td class="p-4">${order.items.reduce((s, i) => s + i.qty, 0)} items</td>
-                  <td class="p-4">
+                  <td class="p-3 sm:p-4 font-bold text-primary">${order.receiptNumber}</td>
+                  <td class="p-3 sm:p-4 text-on-surface-variant text-xs">${order.displayDate}</td>
+                  <td class="p-3 sm:p-4 font-semibold">${order.customer?.name || 'Walk-in'}</td>
+                  <td class="p-3 sm:p-4">${order.items.reduce((s, i) => s + i.qty, 0)} items</td>
+                  <td class="p-3 sm:p-4">
                     <span class="px-2.5 py-1 bg-surface-container-high rounded-md text-xs font-bold">${order.paymentMethod}</span>
                   </td>
-                  <td class="p-4 text-right font-headline-md font-bold text-base">${pos.settings.currency}${order.total.toFixed(2)}</td>
-                  <td class="p-4 text-center">
-                    <div class="flex items-center justify-center gap-2">
+                  <td class="p-3 sm:p-4 text-right font-headline-md font-bold text-sm sm:text-base">${pos.settings.currency}${order.total.toFixed(2)}</td>
+                  <td class="p-3 sm:p-4 text-center">
+                    <div class="flex items-center justify-center gap-1.5 sm:gap-2">
                       <button 
-                        class="history-print-btn p-2 rounded-lg bg-surface hover:bg-primary hover:text-on-primary text-on-surface-variant transition-colors border border-outline-variant/30" 
+                        class="history-print-btn p-1.5 sm:p-2 rounded-lg bg-surface hover:bg-primary hover:text-on-primary text-on-surface-variant transition-colors border border-outline-variant/30" 
                         data-receipt="${order.receiptNumber}" 
                         title="Print Receipt"
                       >
-                        <span class="material-symbols-outlined text-[18px]">print</span>
+                        <span class="material-symbols-outlined text-[17px] sm:text-[18px]">print</span>
                       </button>
                       <button 
                         onclick="confirmDeleteSingleOrder('${order.id}', '${order.receiptNumber}')" 
-                        class="p-2 rounded-lg bg-surface hover:bg-error hover:text-on-error text-error transition-colors border border-outline-variant/30" 
+                        class="p-1.5 sm:p-2 rounded-lg bg-surface hover:bg-error hover:text-on-error text-error transition-colors border border-outline-variant/30" 
                         title="Delete this Order"
                       >
-                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                        <span class="material-symbols-outlined text-[17px] sm:text-[18px]">delete</span>
                       </button>
                     </div>
                   </td>
@@ -3731,62 +3910,83 @@ function renderKitchenView() {
   return `
   <div class="flex flex-col w-full h-[calc(100vh-64px)] bg-surface-container-lowest animate-screen-enter select-none overflow-hidden">
     
-    <!-- Top Kitchen Toolbar (64px) -->
-    <div class="h-16 shrink-0 bg-surface px-6 border-b border-outline-variant/30 flex items-center justify-between shadow-xs">
+    <!-- Top Kitchen Toolbar -->
+    <div class="h-auto shrink-0 bg-surface px-3 sm:px-6 py-2.5 sm:py-0 sm:h-16 border-b border-outline-variant/30 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3 shadow-xs">
       
       <!-- Left Title & Counters -->
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-xs">
-          <span class="material-symbols-outlined text-[24px]">soup_kitchen</span>
+      <div class="flex items-center justify-between md:justify-start gap-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-xs shrink-0">
+            <span class="material-symbols-outlined text-[20px] sm:text-[24px]">soup_kitchen</span>
+          </div>
+          <div>
+            <h1 class="font-headline-lg text-base sm:text-lg font-extrabold text-on-surface flex items-center gap-1.5 sm:gap-2">
+              Kitchen Display (KDS)
+              <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-primary text-on-primary font-bold">LIVE</span>
+            </h1>
+            <p class="text-[11px] sm:text-xs text-on-surface-variant font-medium hidden sm:block">Real-time Order Cooking & Preparation Board</p>
+          </div>
         </div>
-        <div>
-          <h1 class="font-headline-lg text-lg font-extrabold text-on-surface flex items-center gap-2">
-            Kitchen Display System (KDS)
-            <span class="text-xs px-2.5 py-0.5 rounded-full bg-primary text-on-primary font-bold">LIVE KOT</span>
-          </h1>
-          <p class="text-xs text-on-surface-variant font-medium">Real-time Order Cooking & Preparation Board</p>
+
+        <!-- Right Actions on Mobile: Sound Bell & Fullscreen -->
+        <div class="flex md:hidden items-center gap-1.5">
+          <button 
+            onclick="playKitchenAudioChime()"
+            class="h-8 px-2.5 rounded-lg border border-outline-variant/40 bg-surface hover:bg-surface-container text-on-surface text-xs font-label-bold flex items-center gap-1 shadow-xs active:scale-95"
+            title="Test Audio Chime Bell"
+          >
+            <span class="material-symbols-outlined text-[15px] text-primary">notifications_active</span>
+            <span>Chime</span>
+          </button>
+          <button 
+            onclick="toggleKDSFullscreen()"
+            class="h-8 w-8 rounded-lg bg-surface-container hover:bg-surface-container-highest text-on-surface flex items-center justify-center shadow-xs active:scale-95"
+            title="Toggle Fullscreen"
+          >
+            <span class="material-symbols-outlined text-[16px]">fullscreen</span>
+          </button>
         </div>
       </div>
 
-      <!-- Center Status Filter Tabs -->
-      <div class="flex items-center gap-1.5 bg-surface-container-high p-1 rounded-xl border border-outline-variant/30">
+      <!-- Status Filter Tabs (Horizontal Scrollable) -->
+      <div class="flex items-center gap-1.5 bg-surface-container-high p-1 rounded-xl border border-outline-variant/30 overflow-x-auto no-scrollbar shrink-0">
         <button 
           onclick="setKitchenFilter('all')"
-          class="kitchen-filter-tab px-3.5 py-1.5 rounded-lg text-xs font-label-bold transition-all ${filter === 'all' ? 'bg-primary text-on-primary shadow-xs' : 'text-on-surface hover:bg-surface-variant'}"
+          class="kitchen-filter-tab px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-label-bold whitespace-nowrap transition-all shrink-0 ${filter === 'all' ? 'bg-primary text-on-primary shadow-xs' : 'text-on-surface hover:bg-surface-variant'}"
         >
-          All Active (${pendingCount + preparingCount + readyCount})
+          All (${pendingCount + preparingCount + readyCount})
         </button>
         <button 
           onclick="setKitchenFilter('pending')"
-          class="kitchen-filter-tab px-3 py-1.5 rounded-lg text-xs font-label-bold transition-all flex items-center gap-1 ${filter === 'pending' ? 'bg-amber-600 text-white shadow-xs' : 'text-amber-800 hover:bg-amber-500/10'}"
+          class="kitchen-filter-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-label-bold whitespace-nowrap transition-all flex items-center gap-1 shrink-0 ${filter === 'pending' ? 'bg-amber-600 text-white shadow-xs' : 'text-amber-800 hover:bg-amber-500/10'}"
         >
           <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-          New / Pending (${pendingCount})
+          New (${pendingCount})
         </button>
         <button 
           onclick="setKitchenFilter('preparing')"
-          class="kitchen-filter-tab px-3 py-1.5 rounded-lg text-xs font-label-bold transition-all flex items-center gap-1 ${filter === 'preparing' ? 'bg-blue-600 text-white shadow-xs' : 'text-blue-800 hover:bg-blue-500/10'}"
+          class="kitchen-filter-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-label-bold whitespace-nowrap transition-all flex items-center gap-1 shrink-0 ${filter === 'preparing' ? 'bg-blue-600 text-white shadow-xs' : 'text-blue-800 hover:bg-blue-500/10'}"
         >
           <span class="material-symbols-outlined text-[14px]">skillet</span>
           Cooking (${preparingCount})
         </button>
         <button 
           onclick="setKitchenFilter('ready')"
-          class="kitchen-filter-tab px-3 py-1.5 rounded-lg text-xs font-label-bold transition-all flex items-center gap-1 ${filter === 'ready' ? 'bg-emerald-600 text-white shadow-xs' : 'text-emerald-800 hover:bg-emerald-500/10'}"
+          class="kitchen-filter-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-label-bold whitespace-nowrap transition-all flex items-center gap-1 shrink-0 ${filter === 'ready' ? 'bg-emerald-600 text-white shadow-xs' : 'text-emerald-800 hover:bg-emerald-500/10'}"
         >
           <span class="material-symbols-outlined text-[14px]">check_circle</span>
           Ready (${readyCount})
         </button>
         <button 
           onclick="setKitchenFilter('history')"
-          class="kitchen-filter-tab px-3 py-1.5 rounded-lg text-xs font-label-bold transition-all text-on-surface-variant hover:bg-surface-variant ${filter === 'history' ? 'bg-surface text-on-surface font-bold shadow-xs' : ''}"
+          class="kitchen-filter-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-label-bold whitespace-nowrap transition-all shrink-0 text-on-surface-variant hover:bg-surface-variant ${filter === 'history' ? 'bg-surface text-on-surface font-bold shadow-xs' : ''}"
         >
-          Past Recalls (${servedCount})
+          Recalls (${servedCount})
         </button>
       </div>
 
-      <!-- Right Actions: Sound Bell, Fullscreen, Test Chime -->
-      <div class="flex items-center gap-2">
+      <!-- Desktop Right Actions: Sound Bell, Fullscreen -->
+      <div class="hidden md:flex items-center gap-2 shrink-0">
         <button 
           onclick="playKitchenAudioChime()"
           class="h-9 px-3 rounded-xl border border-outline-variant/40 bg-surface hover:bg-surface-container text-on-surface text-xs font-label-bold flex items-center gap-1.5 transition-all shadow-xs active:scale-95"
@@ -3808,7 +4008,7 @@ function renderKitchenView() {
     </div>
 
     <!-- Kitchen Orders Container -->
-    <div id="kitchen-cards-container" class="flex-1 p-5 overflow-y-auto">
+    <div id="kitchen-cards-container" class="flex-1 p-3 sm:p-5 pb-24 md:pb-5 overflow-y-auto">
       ${orders.length === 0 ? `
         <div class="h-full min-h-[380px] flex flex-col items-center justify-center text-center text-on-surface-variant gap-4 bg-surface-container-low/40 rounded-3xl border-2 border-dashed border-outline-variant/30 p-8 my-auto">
           <div class="w-20 h-20 rounded-3xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shadow-sm">
@@ -3822,7 +4022,7 @@ function renderKitchenView() {
           </div>
         </div>
       ` : `
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4.5 auto-rows-max">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4.5 auto-rows-max">
           ${orders.map(order => renderKitchenOrderCard(order)).join('')}
         </div>
       `}
@@ -4137,14 +4337,17 @@ function playKitchenAudioChime() {
 
 function updateKitchenBadgeDOM() {
   const badge = document.getElementById("kds-pending-badge");
-  if (!badge) return;
+  const mobileBadge = document.getElementById("kds-pending-badge-mobile");
   const count = pos.getPendingKitchenCount();
-  if (count > 0) {
-    badge.textContent = count;
-    badge.classList.remove("hidden");
-  } else {
-    badge.classList.add("hidden");
-  }
+  [badge, mobileBadge].forEach(b => {
+    if (!b) return;
+    if (count > 0) {
+      b.textContent = count;
+      b.classList.remove("hidden");
+    } else {
+      b.classList.add("hidden");
+    }
+  });
 }
 
 function printKitchenKOT(orderId) {
@@ -4211,32 +4414,32 @@ function printKitchenKOT(orderId) {
 
 function renderSettingsView() {
   return `
-  <div class="flex flex-col w-full h-[calc(100vh-64px)] p-margin-edge overflow-y-auto animate-screen-enter select-none">
+  <div class="flex flex-col w-full h-[calc(100vh-64px)] p-3 sm:p-margin-edge pb-24 md:pb-8 overflow-y-auto animate-screen-enter select-none">
     
     <!-- Top Header Bar -->
-    <div class="flex items-center justify-between mb-5 shrink-0">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5 shrink-0">
       <div class="flex items-center gap-3">
-        <h1 class="font-headline-lg text-headline-lg text-on-surface font-bold flex items-center gap-2">
-          <span class="material-symbols-outlined text-primary text-[28px]">settings</span>
+        <h1 class="font-headline-lg text-lg sm:text-headline-lg text-on-surface font-bold flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[24px] sm:text-[28px]">settings</span>
           POS Settings & Store Configuration
         </h1>
-        <span class="font-label-bold text-xs bg-primary-container text-on-primary-container px-3 py-1 rounded-full font-bold">
+        <span class="font-label-bold text-xs bg-primary-container text-on-primary-container px-3 py-1 rounded-full font-bold hidden sm:inline-block">
           Enterprise POS Suite
         </span>
       </div>
       <button 
         id="save-settings-btn"
-        class="h-11 px-6 rounded-xl bg-primary text-on-primary font-headline-md text-sm flex items-center gap-2 shadow-md hover:bg-primary/90 transition-all active:scale-95"
+        class="w-full sm:w-auto h-11 px-6 rounded-xl bg-primary text-on-primary font-headline-md text-sm flex items-center justify-center gap-2 shadow-md hover:bg-primary/90 transition-all active:scale-95"
       >
         <span class="material-symbols-outlined text-[18px]">save</span>
         Save All Settings
       </button>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 pb-8">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 pb-8">
       
       <!-- Card 1: 🏪 Store Profile & Business Details -->
-      <div class="bg-surface-container-low p-5 rounded-2xl shadow-sm flex flex-col gap-4 border border-outline-variant/30">
+      <div class="bg-surface-container-low p-4 sm:p-5 rounded-2xl shadow-sm flex flex-col gap-4 border border-outline-variant/30">
         <div class="flex items-center justify-between border-b border-outline-variant/20 pb-3">
           <h2 class="font-headline-md text-base text-on-surface flex items-center gap-2 font-bold">
             <span class="material-symbols-outlined text-primary">storefront</span>
@@ -4247,7 +4450,7 @@ function renderSettingsView() {
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div class="flex flex-col gap-1">
             <label class="font-label-bold text-xs text-on-surface-variant font-bold">Cafe / Store Name *</label>
             <input id="set-store-name" class="h-10 px-3 rounded-xl bg-surface border border-outline-variant text-on-surface font-body-md text-sm outline-none focus:ring-2 focus:ring-primary" value="${pos.settings.storeName}" placeholder="e.g. MGN Cafe" />
@@ -4258,7 +4461,7 @@ function renderSettingsView() {
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div class="flex flex-col gap-1">
             <label class="font-label-bold text-xs text-on-surface-variant font-bold">Terminal ID</label>
             <input id="set-terminal" class="h-10 px-3 rounded-xl bg-surface border border-outline-variant text-on-surface font-body-md text-sm outline-none focus:ring-2 focus:ring-primary" value="${pos.settings.terminal || 'Terminal #01'}" placeholder="Terminal #01" />
@@ -4269,7 +4472,7 @@ function renderSettingsView() {
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div class="flex flex-col gap-1">
             <label class="font-label-bold text-xs text-on-surface-variant font-bold">Official Phone (Bills/SMS)</label>
             <input id="set-receipt-phone" class="h-10 px-3 rounded-xl bg-surface border border-outline-variant text-on-surface font-body-md text-sm outline-none focus:ring-2 focus:ring-primary" value="${pos.settings.receiptPhone}" placeholder="+91 98765 43210" />
@@ -4280,7 +4483,7 @@ function renderSettingsView() {
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div class="flex flex-col gap-1">
             <label class="font-label-bold text-xs text-on-surface-variant font-bold">GSTIN / Tax ID</label>
             <input id="set-gstin" class="h-10 px-3 rounded-xl bg-surface border border-outline-variant text-on-surface font-body-md text-sm outline-none focus:ring-2 focus:ring-primary uppercase font-bold" value="${pos.settings.gstin || ''}" placeholder="07AAAAA0000A1Z5" />
@@ -4298,7 +4501,7 @@ function renderSettingsView() {
       </div>
 
       <!-- Card 2: 💳 Taxes, Currency & Calculation Rules -->
-      <div class="bg-surface-container-low p-5 rounded-2xl shadow-sm flex flex-col gap-4 border border-outline-variant/30">
+      <div class="bg-surface-container-low p-4 sm:p-5 rounded-2xl shadow-sm flex flex-col gap-4 border border-outline-variant/30">
         <div class="flex items-center justify-between border-b border-outline-variant/20 pb-3">
           <h2 class="font-headline-md text-base text-on-surface flex items-center gap-2 font-bold">
             <span class="material-symbols-outlined text-secondary">calculate</span>
@@ -4307,7 +4510,7 @@ function renderSettingsView() {
           <span class="font-label-bold text-xs text-secondary bg-secondary-container px-2.5 py-0.5 rounded-full font-bold">GST Ready</span>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div class="flex flex-col gap-1">
             <label class="font-label-bold text-xs text-on-surface-variant font-bold">GST Rate (%)</label>
             <input id="set-tax-rate" type="number" step="0.1" class="h-10 px-3 rounded-xl bg-surface border border-outline-variant text-on-surface font-body-md text-sm outline-none focus:ring-2 focus:ring-primary font-bold" value="${pos.settings.taxRate}" />
@@ -4318,7 +4521,7 @@ function renderSettingsView() {
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div class="flex flex-col gap-1">
             <label class="font-label-bold text-xs text-on-surface-variant font-bold">Tax Application Mode</label>
             <select id="set-tax-mode" class="h-10 px-3 rounded-xl bg-surface border border-outline-variant text-on-surface font-body-md text-sm outline-none focus:ring-2 focus:ring-primary">
@@ -4359,7 +4562,7 @@ function renderSettingsView() {
           <input id="set-starting-float" type="number" step="100" class="h-10 px-3 rounded-xl bg-surface border border-outline-variant text-on-surface font-body-md text-sm outline-none focus:ring-2 focus:ring-primary font-bold" value="${pos.settings.drawerFloat || 0}" />
         </div>
 
-        <div class="grid grid-cols-3 gap-2.5">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           <div class="p-3 bg-surface rounded-xl shadow-xs border border-outline-variant/20 flex flex-col">
             <span class="font-label-sm text-[11px] text-on-surface-variant">Starting Float</span>
             <p class="font-headline-md text-on-surface font-bold text-sm mt-0.5">${pos.settings.currency}${(pos.drawer.startingFloat || 0).toFixed(2)}</p>
@@ -4393,7 +4596,7 @@ function renderSettingsView() {
       </div>
 
       <!-- Card 4: 🧾 Thermal Print Receipt & Layout -->
-      <div class="bg-surface-container-low p-5 rounded-2xl shadow-sm flex flex-col gap-4 border border-outline-variant/30">
+      <div class="bg-surface-container-low p-4 sm:p-5 rounded-2xl shadow-sm flex flex-col gap-4 border border-outline-variant/30">
         <div class="flex items-center justify-between border-b border-outline-variant/20 pb-3">
           <h2 class="font-headline-md text-base text-on-surface flex items-center gap-2 font-bold">
             <span class="material-symbols-outlined text-primary">receipt_long</span>
@@ -4415,7 +4618,7 @@ function renderSettingsView() {
           <input id="set-receipt-footer" class="h-10 px-3 rounded-xl bg-surface border border-outline-variant text-on-surface font-body-md text-sm outline-none focus:ring-2 focus:ring-primary" value="${pos.settings.receiptFooter}" placeholder="e.g. Thank you for visiting MGN Cafe! Have a great day." />
         </div>
 
-        <div class="grid grid-cols-3 gap-2 pt-1">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
           <label class="flex items-center gap-2 p-2 bg-surface rounded-xl border border-outline-variant/30 text-xs font-semibold cursor-pointer">
             <input id="set-show-logo" type="checkbox" class="rounded text-primary focus:ring-0" ${pos.settings.showLogoOnReceipt !== false ? 'checked' : ''} />
             <span>Print Logo</span>
@@ -4573,7 +4776,7 @@ function openCashDrawerActionModal(type = "add") {
   const isAdd = type === "add";
   const modal = document.getElementById("general-modal");
   modal.innerHTML = `
-    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-sm w-full p-6 flex flex-col gap-4 animate-fade-in-up border border-outline-variant/30 my-auto">
+    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-sm w-full mx-2 sm:mx-auto p-4 sm:p-6 flex flex-col gap-3.5 sm:gap-4 animate-fade-in-up border border-outline-variant/30 my-auto max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center pb-2 border-b border-outline-variant/20">
         <h3 class="font-headline-lg text-base font-bold text-on-surface flex items-center gap-2">
           <span class="material-symbols-outlined ${isAdd ? 'text-secondary' : 'text-error'}">${isAdd ? 'add_circle' : 'remove_circle'}</span>
@@ -4664,7 +4867,7 @@ function openItemCustomizePopup(productId) {
 
   const modal = document.getElementById("general-modal");
   modal.innerHTML = `
-    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full p-6 flex flex-col gap-4 animate-fade-in-up border border-outline-variant/30 my-auto">
+    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full mx-2 sm:mx-auto p-4 sm:p-6 flex flex-col gap-3.5 sm:gap-4 animate-fade-in-up border border-outline-variant/30 my-auto max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-start pb-2 border-b border-outline-variant/20">
         <div class="flex items-center gap-3">
           <div class="w-14 h-14 rounded-xl bg-surface-container flex items-center justify-center overflow-hidden shrink-0" style="background-color: ${product.color || '#eff4ff'};">
@@ -4821,7 +5024,7 @@ function openProductModal(productId = null) {
 
   const modal = document.getElementById("general-modal");
   modal.innerHTML = `
-    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-xl w-full p-6 flex flex-col gap-4 animate-fade-in-up border border-outline-variant/30 my-auto max-h-[90vh] overflow-y-auto">
+    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-xl w-full mx-2 sm:mx-auto p-4 sm:p-6 flex flex-col gap-3.5 sm:gap-4 animate-fade-in-up border border-outline-variant/30 my-auto max-h-[90vh] overflow-y-auto">
       
       <div class="flex justify-between items-center pb-2 border-b border-outline-variant/20">
         <h3 class="font-headline-lg text-lg font-bold text-on-surface flex items-center gap-2">
@@ -4848,7 +5051,7 @@ function openProductModal(productId = null) {
         </label>
       </div>
 
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="flex flex-col gap-3">
           <div class="flex flex-col gap-1">
             <label class="font-label-bold text-xs text-on-surface-variant font-bold">Product / Combo Name *</label>
@@ -5277,7 +5480,7 @@ function openCloudSyncModal() {
   const posUrl = `${currentOrigin}?room=${encodeURIComponent(currentRoom)}&role=dashboard`;
 
   modal.innerHTML = `
-    <div class="relative bg-surface-container-lowest rounded-3xl shadow-2xl max-w-xl w-full p-6 flex flex-col gap-5 animate-fade-in-up border border-outline-variant/30 my-auto">
+    <div class="relative bg-surface-container-lowest rounded-3xl shadow-2xl max-w-xl w-full mx-2 sm:mx-auto p-4 sm:p-6 flex flex-col gap-4 sm:gap-5 animate-fade-in-up border border-outline-variant/30 my-auto max-h-[90vh] overflow-y-auto">
       
       <!-- Modal Header -->
       <div class="flex items-center justify-between border-b border-outline-variant/20 pb-3">
@@ -5447,7 +5650,7 @@ function openHoldOrderModal() {
   const defaultRef = `Token #${pos.heldOrders.length + 1}`;
   const modal = document.getElementById("general-modal");
   modal.innerHTML = `
-    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full p-6 flex flex-col gap-4 animate-fade-in-up border border-outline-variant/30 my-auto">
+    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full mx-2 sm:mx-auto p-4 sm:p-6 flex flex-col gap-3.5 sm:gap-4 animate-fade-in-up border border-outline-variant/30 my-auto max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center pb-2 border-b border-outline-variant/20">
         <h3 class="font-headline-lg text-lg font-bold text-on-surface flex items-center gap-2">
           <span class="material-symbols-outlined text-amber-600 text-[24px]">pause_circle</span>
@@ -5513,7 +5716,7 @@ function openHeldOrdersModal() {
   }
 
   modal.innerHTML = `
-    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-xl w-full p-6 flex flex-col gap-4 animate-fade-in-up border border-outline-variant/30 my-auto">
+    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-xl w-full mx-2 sm:mx-auto p-4 sm:p-6 flex flex-col gap-3.5 sm:gap-4 animate-fade-in-up border border-outline-variant/30 my-auto max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center pb-2 border-b border-outline-variant/20">
         <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-amber-600 text-[24px]">pause_circle</span>
@@ -5623,7 +5826,7 @@ function openDeleteOrderHistoryModal() {
   const todayCount = pos.orders.filter(o => (o.date || o.timestamp || "").slice(0, 10) === todayStr).length;
 
   modal.innerHTML = `
-    <div class="relative bg-surface-container-lowest rounded-3xl shadow-2xl max-w-lg w-full p-6 flex flex-col gap-5 animate-fade-in-up border border-outline-variant/30 my-auto">
+    <div class="relative bg-surface-container-lowest rounded-3xl shadow-2xl max-w-lg w-full mx-2 sm:mx-auto p-4 sm:p-6 flex flex-col gap-4 sm:gap-5 animate-fade-in-up border border-outline-variant/30 my-auto max-h-[90vh] overflow-y-auto">
       
       <!-- Modal Header -->
       <div class="flex items-center justify-between border-b border-outline-variant/20 pb-3">
@@ -5778,7 +5981,7 @@ function confirmDeleteSingleOrder(orderId, receipt) {
 function openAddCategoryModal() {
   const modal = document.getElementById("general-modal");
   modal.innerHTML = `
-    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full p-6 flex flex-col gap-4 animate-fade-in-up border border-outline-variant/30 my-auto">
+    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full mx-2 sm:mx-auto p-4 sm:p-6 flex flex-col gap-4 animate-fade-in-up border border-outline-variant/30 my-auto max-h-[90vh] overflow-y-auto">
       <h3 class="font-headline-lg text-lg font-bold text-on-surface">Add New Menu Category</h3>
       <div class="flex flex-col gap-1">
         <label class="font-label-bold text-xs text-on-surface-variant font-bold">Category Name</label>
@@ -5809,9 +6012,9 @@ function openAddCategoryModal() {
 function openDiscountModal() {
   const modal = document.getElementById("general-modal");
   modal.innerHTML = `
-    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full p-margin-edge flex flex-col gap-stack-md animate-fade-in-up border border-outline-variant/30 my-auto">
+    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full mx-2 sm:mx-auto p-4 sm:p-margin-edge flex flex-col gap-stack-md animate-fade-in-up border border-outline-variant/30 my-auto max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center">
-        <h3 class="font-headline-lg text-headline-lg font-bold text-on-surface">Apply Discount</h3>
+        <h3 class="font-headline-lg text-lg sm:text-headline-lg font-bold text-on-surface">Apply Discount</h3>
         <button onclick="closeModal()" class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined">close</span></button>
       </div>
 
@@ -5862,8 +6065,8 @@ function openDiscountModal() {
 function openNoteModal() {
   const modal = document.getElementById("general-modal");
   modal.innerHTML = `
-    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full p-margin-edge flex flex-col gap-stack-md animate-fade-in-up border border-outline-variant/30 my-auto">
-      <h3 class="font-headline-lg text-headline-lg font-bold text-on-surface">Order Note</h3>
+    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full mx-2 sm:mx-auto p-4 sm:p-margin-edge flex flex-col gap-stack-md animate-fade-in-up border border-outline-variant/30 my-auto max-h-[90vh] overflow-y-auto">
+      <h3 class="font-headline-lg text-lg sm:text-headline-lg font-bold text-on-surface">Order Note</h3>
       <textarea id="order-note-input" rows="3" class="w-full p-3 rounded-xl bg-surface border border-outline-variant text-on-surface font-body-md text-sm outline-none focus:ring-2 focus:ring-primary" placeholder="e.g. Table #4, Rush order, Pack separately...">${pos.orderNote}</textarea>
       <div class="flex gap-gutter mt-2">
         <button onclick="closeModal()" class="flex-1 h-11 rounded-xl border border-outline-variant font-label-bold text-on-surface">Cancel</button>
@@ -5884,8 +6087,8 @@ function openNoteModal() {
 function openCustomerModal() {
   const modal = document.getElementById("general-modal");
   modal.innerHTML = `
-    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full p-margin-edge flex flex-col gap-stack-md animate-fade-in-up border border-outline-variant/30 my-auto">
-      <h3 class="font-headline-lg text-headline-lg font-bold text-on-surface">Customer Details</h3>
+    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full mx-2 sm:mx-auto p-4 sm:p-margin-edge flex flex-col gap-stack-md animate-fade-in-up border border-outline-variant/30 my-auto max-h-[90vh] overflow-y-auto">
+      <h3 class="font-headline-lg text-lg sm:text-headline-lg font-bold text-on-surface">Customer Details</h3>
       <div class="flex flex-col gap-1">
         <label class="font-label-bold text-xs text-on-surface-variant font-bold">Customer Name</label>
         <input id="cust-name-input" class="h-11 px-4 rounded-xl bg-surface border border-outline-variant text-on-surface font-body-md text-sm" value="${pos.customer.name === 'Walk-in Customer' ? '' : pos.customer.name}" placeholder="e.g. Rahul Sharma" />
@@ -5916,16 +6119,16 @@ function openDigitalPaymentModal() {
   const total = pos.getTotalDue();
   const modal = document.getElementById("general-modal");
   modal.innerHTML = `
-    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full p-margin-edge flex flex-col items-center text-center gap-stack-md animate-fade-in-up border border-outline-variant/30 my-auto">
-      <div class="w-16 h-16 rounded-2xl bg-primary-container flex items-center justify-center text-on-primary-container mb-1 shadow-sm">
-        <span class="material-symbols-outlined text-[36px]">qr_code_2</span>
+    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full mx-2 sm:mx-auto p-4 sm:p-margin-edge flex flex-col items-center text-center gap-3 sm:gap-stack-md animate-fade-in-up border border-outline-variant/30 my-auto max-h-[90vh] overflow-y-auto">
+      <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-primary-container flex items-center justify-center text-on-primary-container mb-1 shadow-sm">
+        <span class="material-symbols-outlined text-[30px] sm:text-[36px]">qr_code_2</span>
       </div>
 
-      <h3 class="font-headline-lg text-headline-lg font-bold text-on-surface">UPI & Digital Payment</h3>
-      <p class="font-body-md text-sm text-on-surface-variant">Scan UPI QR code (GPay, PhonePe, Paytm) or swipe/tap card on customer terminal.</p>
+      <h3 class="font-headline-lg text-lg sm:text-headline-lg font-bold text-on-surface">UPI & Digital Payment</h3>
+      <p class="font-body-md text-xs sm:text-sm text-on-surface-variant">Scan UPI QR code (GPay, PhonePe, Paytm) or swipe/tap card on customer terminal.</p>
 
-      <div class="my-2 p-5 bg-surface-container-high rounded-2xl flex flex-col items-center gap-2.5 w-full border border-primary/20">
-        <div class="w-44 h-44 bg-white p-3 rounded-xl shadow-md flex items-center justify-center border-2 border-primary">
+      <div class="my-1 sm:my-2 p-3.5 sm:p-5 bg-surface-container-high rounded-2xl flex flex-col items-center gap-2 sm:gap-2.5 w-full border border-primary/20">
+        <div class="w-36 h-36 sm:w-44 sm:h-44 bg-white p-2.5 sm:p-3 rounded-xl shadow-md flex items-center justify-center border-2 border-primary">
           <svg viewBox="0 0 100 100" class="w-full h-full text-on-surface">
             <rect width="100" height="100" fill="white" />
             <path d="M10 10h30v30h-30zM15 15h20v20h-20zM22 22h6v6h-6z" fill="#0058be"/>
@@ -5937,13 +6140,13 @@ function openDigitalPaymentModal() {
             <rect x="50" y="70" width="20" height="10" fill="#0058be"/>
           </svg>
         </div>
-        <span class="font-headline-lg text-primary font-bold">${pos.settings.currency}${total.toFixed(2)}</span>
-        <span class="font-label-sm text-xs text-on-surface-variant font-medium">UPI ID: ${pos.settings.upiId || 'mgncafe@upi'} · Instant Verification</span>
+        <span class="font-headline-lg text-xl sm:text-headline-lg text-primary font-bold">${pos.settings.currency}${total.toFixed(2)}</span>
+        <span class="font-label-sm text-[11px] sm:text-xs text-on-surface-variant font-medium">UPI ID: ${pos.settings.upiId || 'mgncafe@upi'} · Instant Verification</span>
       </div>
 
-      <div class="flex gap-gutter w-full">
-        <button onclick="closeModal()" class="flex-1 h-12 rounded-xl border border-outline-variant font-label-bold text-on-surface">Cancel</button>
-        <button id="simulate-card-success-btn" class="flex-1 h-12 rounded-xl bg-secondary text-on-secondary font-headline-md text-sm flex items-center justify-center gap-2 shadow-md hover:bg-secondary/90 active:scale-95">
+      <div class="flex gap-2 sm:gap-gutter w-full">
+        <button onclick="closeModal()" class="flex-1 h-11 sm:h-12 rounded-xl border border-outline-variant font-label-bold text-xs sm:text-sm text-on-surface">Cancel</button>
+        <button id="simulate-card-success-btn" class="flex-1 h-11 sm:h-12 rounded-xl bg-secondary text-on-secondary font-headline-md text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 shadow-md hover:bg-secondary/90 active:scale-95">
           <span class="material-symbols-outlined text-[18px]">check_circle</span>
           Authorize & Complete
         </button>
@@ -5967,7 +6170,7 @@ function openSplitPaymentModal() {
 
   const modal = document.getElementById("general-modal");
   modal.innerHTML = `
-    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full p-margin-edge flex flex-col gap-stack-md animate-fade-in-up border border-outline-variant/30 my-auto">
+    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full mx-2 sm:mx-auto p-4 sm:p-margin-edge flex flex-col gap-3 sm:gap-stack-md animate-fade-in-up border border-outline-variant/30 my-auto max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center">
         <h3 class="font-headline-lg text-headline-lg font-bold text-on-surface">Split Payment</h3>
         <button onclick="closeModal()" class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined">close</span></button>
