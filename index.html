@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+  <meta name="theme-color" content="#1550c8"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="MGN POS"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="application-name" content="MGN POS"/>
+  <meta name="msapplication-TileColor" content="#1550c8"/>
+  <meta name="format-detection" content="telephone=no"/>
+  
+  <title>MGN Cafe - Smart Tablet POS System</title>
+  
+  <!-- Web App Manifest & App Icons -->
+  <link rel="manifest" href="./manifest.json"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="./assets/mgn_logo.png"/>
+  <link rel="apple-touch-icon" href="./assets/mgn_logo.png"/>
+  
+  <!-- Embedded Tailwind Configuration matching M3 Tokens & Premium Typography -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-secondary-container": "#064e3b",
+            "surface-variant": "#dbeafe",
+            "surface-bright": "#ffffff",
+            "secondary-container": "#d1fae5",
+            "on-secondary-fixed-variant": "#065f46",
+            "tertiary-fixed-dim": "#bae6fd",
+            "on-secondary": "#ffffff",
+            "error-container": "#fee2e2",
+            "surface-container-low": "#f1f5fb",
+            "on-primary": "#ffffff",
+            "primary-fixed": "#dbeafe",
+            "on-secondary-fixed": "#022c22",
+            "inverse-on-surface": "#f8fafc",
+            "on-background": "#071731",
+            "on-primary-fixed": "#082f6a",
+            "on-tertiary-fixed": "#082f49",
+            "tertiary": "#0284c7",
+            "outline-variant": "#cbd5e1",
+            "background": "#f3f6fb",
+            "on-tertiary-container": "#0c4a6e",
+            "tertiary-container": "#e0f2fe",
+            "secondary-fixed": "#a7f3d0",
+            "secondary": "#059669",
+            "on-tertiary-fixed-variant": "#0369a1",
+            "surface-dim": "#e2e8f0",
+            "surface-container": "#e6edf7",
+            "surface": "#ffffff",
+            "tertiary-fixed": "#e0f2fe",
+            "on-surface": "#071731",
+            "outline": "#64748b",
+            "on-tertiary": "#ffffff",
+            "inverse-primary": "#93c5fd",
+            "inverse-surface": "#0f172a",
+            "surface-container-highest": "#cbd5e1",
+            "surface-tint": "#1550c8",
+            "primary-container": "#e0ecfe",
+            "on-surface-variant": "#475569",
+            "primary-fixed-dim": "#bfdbfe",
+            "on-primary-fixed-variant": "#1e40af",
+            "error": "#dc2626",
+            "on-error-container": "#7f1d1d",
+            "primary": "#1550c8",
+            "secondary-fixed-dim": "#6ee7b7",
+            "surface-container-lowest": "#ffffff"
+          },
+          borderRadius: {
+            "DEFAULT": "0.375rem",
+            "lg": "0.625rem",
+            "xl": "0.875rem",
+            "2xl": "1.125rem",
+            "3xl": "1.5rem",
+            "full": "9999px"
+          },
+          spacing: {
+            "margin-edge": "20px",
+            "stack-lg": "28px",
+            "stack-sm": "8px",
+            "gutter": "14px",
+            "stack-md": "14px",
+            "touch-target-min": "48px"
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
+            display: ['Outfit', '"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+            "headline-md": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "label-bold": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "display-price": ['Outfit', '"Plus Jakarta Sans"', 'sans-serif'],
+            "body-lg": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "body-md": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "headline-lg": ['Outfit', '"Plus Jakarta Sans"', 'sans-serif'],
+            "label-sm": ['"Plus Jakarta Sans"', 'sans-serif']
+          },
+          fontSize: {
+            "headline-md": ["19px", { "lineHeight": "26px", "letterSpacing": "-0.015em", "fontWeight": "700" }],
+            "label-bold": ["13.5px", { "lineHeight": "18px", "letterSpacing": "0.005em", "fontWeight": "600" }],
+            "display-price": ["42px", { "lineHeight": "48px", "letterSpacing": "-0.03em", "fontWeight": "800" }],
+            "body-lg": ["16.5px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "400" }],
+            "body-md": ["14.5px", { "lineHeight": "22px", "letterSpacing": "-0.005em", "fontWeight": "400" }],
+            "headline-lg": ["22px", { "lineHeight": "28px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "label-sm": ["11.5px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500" }]
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Typography & Icons (Google Fonts: Plus Jakarta Sans, Outfit & Material Symbols) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="styles.css?v=5.6"/>
+</head>
+<body class="bg-background font-sans text-on-surface select-none overflow-hidden antialiased">
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <!-- Main Full-Width Viewport Container -->
+  <div class="w-full h-screen overflow-hidden flex flex-col">
+    <!-- Top Status & Navigation Header (64px) -->
+    <header class="h-16 shrink-0 bg-surface/95 backdrop-blur-xl z-40 px-5 flex items-center justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)] border-b border-outline-variant/30 select-none">
+      
+      <!-- Brand Logo (Pure Logo Icon Only) -->
+      <div class="flex items-center cursor-pointer select-none group py-1" onclick="setRoute('dashboard')" title="MGN Cafe POS">
+        <img src="./assets/mgn_logo.png" alt="MGN Logo" class="h-10 w-auto max-w-[150px] object-contain drop-shadow-sm group-hover:scale-105 transition-transform" onerror="this.src='./mgn_logo.png'" />
+      </div>
+
+      <!-- Center Header Navigation Tabs (Pure Icons Only) -->
+      <nav class="flex items-center gap-1 bg-surface-container-low p-1 rounded-xl border border-outline-variant/30">
+        <button 
+          class="nav-item flex items-center justify-center w-11 h-10 rounded-lg transition-all active" 
+          data-route="dashboard"
+          title="POS Register"
+        >
+          <span class="material-symbols-outlined text-[22px]">point_of_sale</span>
+        </button>
+
+        <button 
+          class="nav-item flex items-center justify-center w-11 h-10 rounded-lg transition-all" 
+          data-route="analytics"
+          title="Analytics & Earnings"
+        >
+          <span class="material-symbols-outlined text-[22px]">query_stats</span>
+        </button>
+
+        <button 
+          class="nav-item flex items-center justify-center w-11 h-10 rounded-lg transition-all" 
+          data-route="products-manager"
+          title="Menu & Inventory"
+        >
+          <span class="material-symbols-outlined text-[22px]">inventory_2</span>
+        </button>
+
+        <button 
+          class="nav-item relative flex items-center justify-center w-11 h-10 rounded-lg transition-all" 
+          data-route="kitchen"
+          title="Kitchen Display System (KDS)"
+        >
+          <span class="material-symbols-outlined text-[22px]">soup_kitchen</span>
+          <span id="kds-pending-badge" class="hidden absolute -top-1 -right-1 min-w-4.5 h-4.5 px-1 rounded-full bg-error text-on-error font-bold text-[9px] flex items-center justify-center animate-pulse">0</span>
+        </button>
+
+        <button 
+          class="nav-item flex items-center justify-center w-11 h-10 rounded-lg transition-all" 
+          data-route="history"
+          title="Sales History"
+        >
+          <span class="material-symbols-outlined text-[22px]">receipt_long</span>
+        </button>
+
+        <button 
+          class="nav-item flex items-center justify-center w-11 h-10 rounded-lg transition-all" 
+          data-route="settings"
+          title="Settings"
+        >
+          <span class="material-symbols-outlined text-[22px]">settings</span>
+        </button>
+      </nav>
+
+      <!-- Right Live Time & Multi-Device Cloud Sync Status -->
+      <div class="flex items-center gap-2">
+        
+        <!-- Multi-Device Cloud Sync Button -->
+        <button 
+          id="header-cloud-sync-btn"
+          onclick="openCloudSyncModal()"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-low hover:bg-surface-container rounded-xl border border-outline-variant/30 text-on-surface-variant font-label-bold text-xs transition-all cursor-pointer shadow-xs active:scale-95"
+          title="Multi-Device Cloud Live Sync & Tablet Pairing"
+        >
+          <span id="sync-status-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="material-symbols-outlined text-[16px] text-primary">cloud_sync</span>
+          <span id="sync-status-label" class="hidden md:inline">Cloud Sync</span>
+        </button>
+
+        <!-- Live Clock -->
+        <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-container-low rounded-xl border border-outline-variant/30 text-on-surface-variant font-label-bold text-xs">
+          <span class="material-symbols-outlined text-[16px] text-primary">schedule</span>
+          <span id="header-live-time" class="tabular-nums"></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Dynamic Viewport -->
+    <main id="app-root" class="flex-1 w-full overflow-hidden relative">
+      <!-- Dynamic Screen Content Rendered by app.js -->
+    </main>
+  </div>
+
+  <!-- Clear All Cart Modal with Darker Backdrop -->
+  <div class="fixed inset-0 z-[100] flex items-center justify-center hidden" id="clear-all-modal">
+    <div class="absolute inset-0 bg-inverse-surface/80 backdrop-blur-sm" onclick="closeModal()"></div>
+    <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full p-margin-edge flex flex-col gap-stack-md animate-fade-in-up">
+      <div class="flex flex-col gap-2">
+        <h3 class="font-headline-lg text-headline-lg text-on-surface">Clear All Items?</h3>
+        <p class="font-body-md text-body-md text-on-surface-variant">
+          This will remove all items currently in the cart. This action cannot be undone.
+        </p>
+      </div>
+      <div class="flex gap-gutter mt-2">
+        <button 
+          class="flex-1 h-touch-target-min rounded-xl border border-outline-variant font-label-bold text-label-bold text-on-surface hover:bg-surface-container-high transition-colors" 
+          onclick="closeModal()"
+        >
+          Cancel
+        </button>
+        <button 
+          id="confirm-clear-cart-btn"
+          class="flex-1 h-touch-target-min rounded-xl bg-error text-on-error font-label-bold text-label-bold hover:bg-error/90 transition-colors shadow-sm active:scale-95"
+        >
+          Clear All
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- General Purpose Modal (Customer, Discounts, Notes, Digital Payment, Split, Add/Edit Product) -->
+  <div class="fixed inset-0 z-[90] flex items-center justify-center hidden bg-inverse-surface/70 backdrop-blur-sm p-4 overflow-y-auto" id="general-modal">
+    <!-- Populated dynamically by app.js -->
+  </div>
+
+  <!-- Thermal Receipt Printable Container (Hidden on screen, visible during window.print()) -->
+  <div id="thermal-receipt-container" class="hidden"></div>
+
+  <!-- Real-Time Multi-Device Sync & QR Pairing Libraries -->
+  <script src="https://unpkg.com/mqtt@5.3.4/dist/mqtt.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <!-- Core POS Application Logic -->
+  <script src="app.js?v=5.6"></script>
+</body>
+</html>

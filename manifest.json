@@ -1,0 +1,75 @@
+{
+  "name": "MGN Cafe - Smart Tablet POS",
+  "short_name": "MGN POS",
+  "description": "Professional Smart Tablet POS System for MGN Cafe with offline billing, thermal receipt printing, menu management and analytics.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "id": "com.mgncafe.pos",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#071731",
+  "theme_color": "#1550c8",
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "categories": [
+    "business",
+    "finance",
+    "food",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "./assets/mgn_logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/mgn_logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/mgn_logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./assets/mgn_logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "POS Register",
+      "short_name": "Register",
+      "description": "Open POS billing register",
+      "url": "./index.html?route=dashboard",
+      "icons": [{ "src": "./assets/mgn_logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Analytics & Earnings",
+      "short_name": "Analytics",
+      "description": "View sales metrics & profit audit",
+      "url": "./index.html?route=analytics",
+      "icons": [{ "src": "./assets/mgn_logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Menu & Inventory",
+      "short_name": "Inventory",
+      "description": "Manage products, prices & stock",
+      "url": "./index.html?route=products",
+      "icons": [{ "src": "./assets/mgn_logo.png", "sizes": "192x192" }]
+    }
+  ]
+}

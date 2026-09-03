@@ -1,0 +1,261 @@
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"on-secondary-container":"#00714d","surface-variant":"#d3e4fe","surface-bright":"#f8f9ff","secondary-container":"#6cf8bb","on-secondary-fixed-variant":"#005236","tertiary-fixed-dim":"#ffb95f","on-secondary":"#ffffff","error-container":"#ffdad6","surface-container-low":"#eff4ff","on-primary":"#ffffff","primary-fixed":"#d8e2ff","on-secondary-fixed":"#002113","inverse-on-surface":"#eaf1ff","on-background":"#0b1c30","on-primary-fixed":"#001a42","on-tertiary-fixed":"#2a1700","tertiary":"#825100","outline-variant":"#c2c6d6","background":"#f8f9ff","on-tertiary-container":"#fffbff","tertiary-container":"#a36700","secondary-fixed":"#6ffbbe","secondary":"#006c49","on-tertiary-fixed-variant":"#653e00","surface-dim":"#cbdbf5","surface-container":"#e5eeff","surface":"#f8f9ff","tertiary-fixed":"#ffddb8","on-surface":"#0b1c30","outline":"#727785","on-tertiary":"#ffffff","inverse-primary":"#adc6ff","inverse-surface":"#213145","surface-container-highest":"#d3e4fe","surface-tint":"#005ac2","primary-container":"#2170e4","on-surface-variant":"#424754","primary-fixed-dim":"#adc6ff","on-primary-fixed-variant":"#004395","error":"#ba1a1a","on-error-container":"#93000a","primary":"#0058be","secondary-fixed-dim":"#4edea3","surface-container-lowest":"#ffffff"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"margin-edge":"24px","stack-lg":"32px","stack-sm":"8px","gutter":"16px","stack-md":"16px","touch-target-min":"48px"},"fontFamily":{"headline-md":["Inter"],"label-bold":["Inter"],"display-price":["Inter"],"body-lg":["Inter"],"body-md":["Inter"],"headline-lg":["Inter"],"label-sm":["Inter"]},"fontSize":{"headline-md":["20px",{"lineHeight":"28px","fontWeight":"600"}],"label-bold":["14px",{"lineHeight":"20px","letterSpacing":"0.01em","fontWeight":"600"}],"display-price":["48px",{"lineHeight":"56px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-lg":["18px",{"lineHeight":"26px","fontWeight":"400"}],"body-md":["16px",{"lineHeight":"24px","fontWeight":"400"}],"headline-lg":["24px",{"lineHeight":"32px","fontWeight":"600"}],"label-sm":["12px",{"lineHeight":"16px","fontWeight":"500"}]}}}}</script><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/></head><body class="bg-background font-body-md text-on-surface"><aside class="fixed left-0 top-0 h-full w-20 bg-surface-container-low z-50 flex flex-col items-center py-stack-lg shadow-[1px_0_0_rgba(0,0,0,0.05)]"><nav class="flex flex-col gap-gutter" data-active-classes="bg-primary text-on-primary rounded-xl"><a aria-current="page" class="w-touch-target-min h-touch-target-min flex items-center justify-center transition-all bg-primary text-on-primary rounded-xl" data-path="dashboard" href="#"><span class="material-symbols-outlined">grid_view</span></a><a class="w-touch-target-min h-touch-target-min flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="payment-method" href="#"><span class="material-symbols-outlined">payments</span></a><a class="w-touch-target-min h-touch-target-min flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="calculation" href="#"><span class="material-symbols-outlined">calculate</span></a><a class="w-touch-target-min h-touch-target-min flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="confirmation" href="#"><span class="material-symbols-outlined">check_circle</span></a></nav><div class="mt-auto flex flex-col gap-gutter"><span class="material-symbols-outlined text-on-surface-variant cursor-pointer">settings</span><span class="material-symbols-outlined text-error cursor-pointer">logout</span></div></aside><div class="pl-20"><header class="fixed top-0 left-20 right-0 h-16 bg-surface/80 backdrop-blur-xl z-40 px-margin-edge flex items-center justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex items-center gap-stack-md"><img alt="POS Brand Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuChXk2Tyrgf0UxiV0gqa_o0Clmnb90Ac6eMC_5TOXk3VEV9CTm3o-HKCjRxuBLNlz47xVvvEzDfVfNXpRKQp8vbz95RKFbxtxJRl_Lg9IupZOvYxd2nxcG4jPBEfJ8mXgKjthpybMQ6XLFLfCLR4ts7a33OKHEorcubdoOeVjXAHpehwTCvz9f2qVG1kGbDf6f1hAdORY_Ks8FZk6IDjcCTBozuus0U4lvpitfdTVnwie_RsEfPu3_zLg"/><div class="h-6 w-[1px] bg-outline-variant"></div><div class="flex flex-col"><span class="font-label-bold text-label-bold text-on-surface">Central Square Store</span><span class="font-label-sm text-label-sm text-on-surface-variant">Terminal #04</span></div></div><div class="flex items-center gap-stack-md"><div class="text-right hidden sm:block"><div class="font-label-bold text-label-bold text-on-surface">Alex Rivera</div><div class="font-label-sm text-label-sm text-on-secondary-container">Shift Active</div></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="w-full pt-16 min-h-screen"><div class="flex flex-col w-full h-full relative">
+<!-- Main Content Area: Split 65/35 -->
+<div class="flex flex-row w-full h-[calc(100vh-64px-80px)] overflow-hidden">
+<!-- Product Workspace (Center/Right) - 65% -->
+<div class="w-[65%] flex flex-col h-full bg-surface overflow-hidden relative shadow-[-4px_0_12px_rgba(0,0,0,0.02)]">
+<!-- Top Actions: Search & Categories -->
+<div class="p-margin-edge flex flex-col gap-gutter shrink-0 z-10 relative">
+<!-- Search Input -->
+<div class="relative w-full">
+<div class="absolute inset-y-0 left-0 pl-gutter flex items-center pointer-events-none text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input class="w-full h-[56px] pl-[52px] pr-[48px] rounded-full bg-surface-container-highest text-on-surface font-body-lg text-body-lg placeholder-on-surface-variant outline-none focus:ring-2 focus:ring-primary focus:bg-surface transition-all shadow-sm" placeholder="Search for products or categories..." type="text"/>
+<button class="absolute inset-y-0 right-0 pr-gutter flex items-center text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<!-- Category Chips -->
+<div class="flex flex-row gap-stack-sm overflow-x-auto pb-stack-sm snap-x pt-stack-sm">
+<button class="shrink-0 h-[40px] px-gutter rounded-full bg-primary text-on-primary font-label-bold text-label-bold shadow-md snap-start transition-transform active:scale-95">All Items</button>
+<button class="shrink-0 h-[40px] px-gutter rounded-full bg-surface-container-high text-on-surface font-label-bold text-label-bold hover:bg-surface-variant transition-colors snap-start active:scale-95">Burgers</button>
+<button class="shrink-0 h-[40px] px-gutter rounded-full bg-surface-container-high text-on-surface font-label-bold text-label-bold hover:bg-surface-variant transition-colors snap-start active:scale-95">Beverages</button>
+<button class="shrink-0 h-[40px] px-gutter rounded-full bg-surface-container-high text-on-surface font-label-bold text-label-bold hover:bg-surface-variant transition-colors snap-start active:scale-95">Salads</button>
+<button class="shrink-0 h-[40px] px-gutter rounded-full bg-surface-container-high text-on-surface font-label-bold text-label-bold hover:bg-surface-variant transition-colors snap-start active:scale-95">Sides</button>
+<button class="shrink-0 h-[40px] px-gutter rounded-full bg-surface-container-high text-on-surface font-label-bold text-label-bold hover:bg-surface-variant transition-colors snap-start active:scale-95">Desserts</button>
+</div>
+</div>
+<!-- Product Grid -->
+<div class="flex-1 overflow-y-auto px-margin-edge pb-margin-edge">
+<div class="grid grid-cols-3 xl:grid-cols-4 gap-gutter auto-rows-max">
+<!-- Product Card 1: Selected State -->
+<button class="relative flex flex-col w-full bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm group hover:shadow-md transition-all h-[220px] ring-2 ring-primary ring-inset">
+<div class="absolute top-stack-sm right-stack-sm w-8 h-8 bg-primary rounded-full flex items-center justify-center shadow-md z-10 scale-100 transition-transform">
+<span class="font-label-bold text-label-bold text-on-primary">2</span>
+</div>
+<div class="w-full h-[120px] bg-surface-container shrink-0 relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="A juicy double cheeseburger on a wooden board, bright studio lighting, white background, high contrast, minimalist food photography, appetizing." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1HAasp6wLgmoEZT0VRlH6MLVwnNCr2fa5gJwG3eJAFBjvv6-BWMhmA8WAij_W0VWIqtmC-Pjda5ZaB4LXZHaDAgSaCVwEcTVRoJ1VEa3P0K84JGRn1Dcmdw9xgle7Ann1e80-E6AQpmx2Kp5IASoQGAjkx8QlttsaeingIKx1MIEk2eFfXFn6VbaTgeZ6P0m4TYKYcurQbyL91grU70VjakdD2XePSKe981EJ-A9ratYY9Ldgzi7wJQ"/>
+</div>
+<div class="flex flex-col p-stack-sm flex-1 justify-between bg-surface-container-lowest">
+<span class="font-label-bold text-label-bold text-on-surface line-clamp-2 text-left leading-tight mt-1">Double Smash Burger</span>
+<span class="font-headline-md text-headline-md text-on-surface text-right w-full mt-auto">$12.50</span>
+</div>
+</button>
+<!-- Product Card 2 -->
+<button class="relative flex flex-col w-full bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm group hover:shadow-md transition-all h-[220px] ring-1 ring-outline-variant/50 ring-inset">
+<div class="w-full h-[120px] bg-surface-container shrink-0 relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="A crisp Caesar salad in a white ceramic bowl, parmesan shavings, croutons, bright overhead lighting, clean white background, minimalist food aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxt7jpBPl71Z6n5yIkzoNnSy-EFSLqbr5cy0-TsYbYV9NU85i2ekBy3WsfyJzt7ni_BFWXGBJ8V06xALro5LtBOyB8thQMs8V3eLgSalZJtBPZWp02VjLecjhgDpTxQbhg-Jz9GW0mVwOyuyQPtPXQRi8rnnbweAgsGQ0aB8DT7-YpXwtQkQyYheoFyCHMGbS9_rZWATkTvxt2vEnKk4Q79MaJGrpiiTQ9UoqPYjM3TdrZANTMGb2Csw"/>
+</div>
+<div class="flex flex-col p-stack-sm flex-1 justify-between bg-surface-container-lowest">
+<span class="font-label-bold text-label-bold text-on-surface line-clamp-2 text-left leading-tight mt-1">Classic Caesar Salad</span>
+<span class="font-headline-md text-headline-md text-on-surface text-right w-full mt-auto">$9.00</span>
+</div>
+</button>
+<!-- Product Card 3 -->
+<button class="relative flex flex-col w-full bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm group hover:shadow-md transition-all h-[220px] ring-1 ring-outline-variant/50 ring-inset">
+<div class="absolute top-stack-sm right-stack-sm w-8 h-8 bg-primary rounded-full flex items-center justify-center shadow-md z-10 scale-100 transition-transform">
+<span class="font-label-bold text-label-bold text-on-primary">1</span>
+</div>
+<div class="w-full h-[120px] bg-surface-container shrink-0 relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="A tall iced latte in a clear glass with condensation, layers of milk and espresso, white background, bright studio lighting, refreshing food photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZSY9fOf3o9aGfZZxnUs-TW54h3gB4X2O4Dpg0RagfrylUqgoT6Q-NFNe_8PWp6s-GSetSmftjGnJuVc1g4xpbcxQT8fZMTkmWPFQthC1YC6ZCcgFju5NSlLOe9eII4n98rAypNAvLFbuc1sqQbbTC44H8CF8T5zH_YylORq06ZpvmE2POZ72P_cc82r58aD_ppflXefgj5loYJMoNuDPO8vRKRgYR17hWEYlOUrRB6Ea_2PQ78Kt02Q"/>
+</div>
+<div class="flex flex-col p-stack-sm flex-1 justify-between bg-surface-container-lowest">
+<span class="font-label-bold text-label-bold text-on-surface line-clamp-2 text-left leading-tight mt-1">Iced Vanilla Latte</span>
+<span class="font-headline-md text-headline-md text-on-surface text-right w-full mt-auto">$5.50</span>
+</div>
+</button>
+<!-- Product Card 4 -->
+<button class="relative flex flex-col w-full bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm group hover:shadow-md transition-all h-[220px] ring-1 ring-outline-variant/50 ring-inset">
+<div class="w-full h-[120px] bg-surface-container shrink-0 relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="A single slice of pepperoni pizza, hot and fresh, gooey cheese, bright lighting, white background, fast food minimalist photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAB2qyGNu000hgV-FtCOAQxljwgc_cHX5oFcttomOYLITDUqNlhN0ZoneSEdNEU73hD34ORHno38J0QZn65GbEhfRQF1OJZwGcXffa6ObdRDyqL6MCjoN4bUGnJpsF7bdNNuFy_O0zLrHPaYJG-cx_y7Yveg5AVB0e_m0yQ16TtQw-Er3fYF3A2nT9-Qkf2jbCTss_DPshzSM2lQmKi2_6UIJ35P1U0TSWoA6ik9ckUeiuriWZEHDzuA"/>
+</div>
+<div class="flex flex-col p-stack-sm flex-1 justify-between bg-surface-container-lowest">
+<span class="font-label-bold text-label-bold text-on-surface line-clamp-2 text-left leading-tight mt-1">Pepperoni Slice</span>
+<span class="font-headline-md text-headline-md text-on-surface text-right w-full mt-auto">$4.50</span>
+</div>
+</button>
+<!-- Product Card 5 -->
+<button class="relative flex flex-col w-full bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm group hover:shadow-md transition-all h-[220px] ring-1 ring-outline-variant/50 ring-inset">
+<div class="w-full h-[120px] bg-surface-container shrink-0 relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="A basket of golden, crispy french fries, salt flakes visible, bright studio lighting, white clean background, high contrast." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCcBriKTz7lT74bA2Xwv9NHzUgCBr8MeusYhuOI8fxbGCsS5UUfAzwiG-hNWOcBrbqKoKnvwREJNiF5SP6QwD3fUow9NcwpveAInKguri4RS3W57cv3zqOk3jAxBkU1Uydob6lFqhAudnF4SBCBKOot_R4q5lZm4Oj5HteCDflzs-m_S8SQOjFWYAOfdfuGFj0uWK-EFyElojE-SfDw8_GWSoYBv_d2s5IsW1pUQQ4BVfb_IFKOY2_nzA"/>
+</div>
+<div class="flex flex-col p-stack-sm flex-1 justify-between bg-surface-container-lowest">
+<span class="font-label-bold text-label-bold text-on-surface line-clamp-2 text-left leading-tight mt-1">Large French Fries</span>
+<span class="font-headline-md text-headline-md text-on-surface text-right w-full mt-auto">$4.00</span>
+</div>
+</button>
+<!-- Product Card 6 -->
+<button class="relative flex flex-col w-full bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm group hover:shadow-md transition-all h-[220px] ring-1 ring-outline-variant/50 ring-inset">
+<div class="w-full h-[120px] bg-surface-container shrink-0 relative overflow-hidden flex items-center justify-center bg-tertiary-container/10">
+<!-- Color bar fallback if no image -->
+<div class="w-full h-4 absolute top-0 left-0 bg-tertiary-container"></div>
+<span class="material-symbols-outlined text-tertiary-container text-[48px]">local_cafe</span>
+</div>
+<div class="flex flex-col p-stack-sm flex-1 justify-between bg-surface-container-lowest">
+<span class="font-label-bold text-label-bold text-on-surface line-clamp-2 text-left leading-tight mt-1">Drip Coffee</span>
+<span class="font-headline-md text-headline-md text-on-surface text-right w-full mt-auto">$3.00</span>
+</div>
+</button>
+<!-- Product Card 7 -->
+<button class="relative flex flex-col w-full bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm group hover:shadow-md transition-all h-[220px] ring-1 ring-outline-variant/50 ring-inset">
+<div class="w-full h-[120px] bg-surface-container shrink-0 relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="A chocolate chip cookie, chunky chocolate, cracked surface, bright lighting, white background, top-down view." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCAG6vTcja33lG_mzBSSdktynJLTW-uoxdT2JUdBhnDfZsAEO-Y7LSyKl62KG7igSdD7z6zKcjrHaWKAYrp4Czz5840jIj37Gg0PN63zmE0moFLzVzGtfr0n7Ij2FyqTcnTiD1dBjxBlsCw19rKieq2iNARSAb72XgkbUbX_1QmWrrekxbkEJ1IEO9dTzpAXD-EYlcdBqGLhSYG5hAj7OA7brMpIRaJW0HD1f3SY5e6Ggj2uTZ_UjZgMg"/>
+</div>
+<div class="flex flex-col p-stack-sm flex-1 justify-between bg-surface-container-lowest">
+<span class="font-label-bold text-label-bold text-on-surface line-clamp-2 text-left leading-tight mt-1">Chunky Choc Cookie</span>
+<span class="font-headline-md text-headline-md text-on-surface text-right w-full mt-auto">$3.50</span>
+</div>
+</button>
+<!-- Product Card 8 -->
+<button class="relative flex flex-col w-full bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm group hover:shadow-md transition-all h-[220px] ring-1 ring-outline-variant/50 ring-inset">
+<div class="w-full h-[120px] bg-surface-container shrink-0 relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="A sparkling water glass with a slice of lemon and ice, bubbly, refreshing, bright studio lighting, white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBM0XfEB58BjrTcvbqSpfYYJnOPMbvVTSUsV1LM1_jE409evametMYUj8fswotqV-jE7tLCXs5bC1S9AINN2c1zEloc4wRTSN7O3ewkVC3Ygu9w1CjMWKAD7NBGjIPFWfz4v-Ey3S_y7QJVWpKwCiROAYB7nugJYnJToO8CX-rRUnX3ouCr2tciBgyndt_DzE8zme8QTkcDOd9lvta1-DrZLWXkv5tGKYwNLQBJXT6yonn4I0XKns1OHA"/>
+</div>
+<div class="flex flex-col p-stack-sm flex-1 justify-between bg-surface-container-lowest">
+<span class="font-label-bold text-label-bold text-on-surface line-clamp-2 text-left leading-tight mt-1">Sparkling Water</span>
+<span class="font-headline-md text-headline-md text-on-surface text-right w-full mt-auto">$2.50</span>
+</div>
+</button>
+</div>
+</div>
+</div>
+<!-- The Cart (Left Panel) - 35% -->
+<div class="w-[35%] h-full bg-surface-container-low flex flex-col relative z-20 shadow-[4px_0_12px_rgba(0,0,0,0.05)]">
+<!-- Cart Header -->
+<div class="h-16 flex items-center justify-between px-gutter shrink-0 bg-surface-container-low">
+<div class="flex items-center gap-stack-sm">
+<span class="material-symbols-outlined text-on-surface">shopping_cart</span>
+<span class="font-headline-lg text-headline-lg text-on-surface">Current Order</span>
+</div>
+<button class="text-on-surface-variant hover:text-error transition-colors p-2 rounded-full hover:bg-surface-container-highest">
+<span class="material-symbols-outlined text-[20px]">delete_sweep</span>
+</button>
+</div>
+<!-- Customer Selector (Optional/Floating) -->
+<div class="px-gutter pb-stack-sm shrink-0">
+<button class="w-full h-12 bg-surface-container rounded-lg flex items-center justify-between px-gutter text-on-surface-variant hover:bg-surface-container-highest transition-colors shadow-sm">
+<div class="flex items-center gap-stack-sm">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+<span class="font-label-bold text-label-bold">Add Customer</span>
+</div>
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+</div>
+<!-- Cart Item List -->
+<div class="flex-1 overflow-y-auto px-gutter pb-gutter flex flex-col gap-2">
+<!-- Item 1 -->
+<div class="flex items-center w-full min-h-[64px] bg-surface-container-lowest rounded-lg p-stack-sm shadow-sm relative group overflow-hidden">
+<!-- Swipe action background (hidden unless active, simulated via structural layout) -->
+<div class="flex flex-col flex-1 min-w-0 pr-2">
+<span class="font-label-bold text-label-bold text-on-surface truncate">Double Smash Burger</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">No Pickles</span>
+</div>
+<div class="flex items-center gap-stack-sm shrink-0 bg-surface-container rounded-full p-1 h-9 shadow-inner">
+<button class="w-7 h-7 rounded-full bg-surface-container-lowest flex items-center justify-center text-on-surface hover:bg-surface-variant shadow-sm transition-colors">
+<span class="material-symbols-outlined text-[16px]">remove</span>
+</button>
+<span class="font-label-bold text-label-bold text-on-surface w-4 text-center">2</span>
+<button class="w-7 h-7 rounded-full bg-surface-container-lowest flex items-center justify-center text-on-surface hover:bg-surface-variant shadow-sm transition-colors">
+<span class="material-symbols-outlined text-[16px]">add</span>
+</button>
+</div>
+<div class="w-16 text-right shrink-0">
+<span class="font-body-md text-body-md font-medium text-on-surface">$25.00</span>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="flex items-center w-full min-h-[64px] bg-surface-container-lowest rounded-lg p-stack-sm shadow-sm relative overflow-hidden">
+<div class="flex flex-col flex-1 min-w-0 pr-2">
+<span class="font-label-bold text-label-bold text-on-surface truncate">Iced Vanilla Latte</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Oat Milk</span>
+</div>
+<div class="flex items-center gap-stack-sm shrink-0 bg-surface-container rounded-full p-1 h-9 shadow-inner">
+<button class="w-7 h-7 rounded-full bg-surface-container-lowest flex items-center justify-center text-on-surface hover:bg-surface-variant shadow-sm transition-colors">
+<span class="material-symbols-outlined text-[16px]">remove</span>
+</button>
+<span class="font-label-bold text-label-bold text-on-surface w-4 text-center">1</span>
+<button class="w-7 h-7 rounded-full bg-surface-container-lowest flex items-center justify-center text-on-surface hover:bg-surface-variant shadow-sm transition-colors">
+<span class="material-symbols-outlined text-[16px]">add</span>
+</button>
+</div>
+<div class="w-16 text-right shrink-0">
+<span class="font-body-md text-body-md font-medium text-on-surface">$5.50</span>
+</div>
+</div>
+<!-- Add Note Ghost Button -->
+<button class="w-full h-10 mt-2 border border-dashed border-outline-variant rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-colors gap-2">
+<span class="material-symbols-outlined text-[18px]">edit_note</span>
+<span class="font-label-sm text-label-sm">Add Order Note</span>
+</button>
+</div>
+<!-- Subtotals (Bottom of cart panel) -->
+<div class="px-gutter pb-4 pt-4 shrink-0 bg-surface-container-low border-t border-outline-variant/30 flex flex-col gap-2">
+<div class="flex justify-between items-center text-on-surface-variant">
+<span class="font-label-sm text-label-sm uppercase tracking-wider">Subtotal</span>
+<span class="font-body-md text-body-md">$30.50</span>
+</div>
+<div class="flex justify-between items-center text-on-surface-variant">
+<span class="font-label-sm text-label-sm uppercase tracking-wider">Tax (8%)</span>
+<span class="font-body-md text-body-md">$2.44</span>
+</div>
+<div class="flex justify-between items-center text-on-surface-variant">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-primary">Discount</span>
+<button class="font-label-bold text-label-bold text-primary hover:underline underline-offset-2">Add -</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Persistent Bottom Action Bar (80px height) -->
+<div class="absolute bottom-0 left-0 w-full h-[80px] bg-surface-container-highest shadow-[0_-4px_16px_rgba(0,0,0,0.1)] flex items-center justify-between px-margin-edge z-40">
+<!-- Left: Summary Stats -->
+<div class="flex items-center gap-gutter"><button class="h-12 px-4 rounded-lg flex items-center gap-2 text-on-surface-variant hover:bg-surface-container-high hover:text-error transition-all active:scale-95 group" onclick="document.getElementById('clear-all-modal').classList.remove('hidden')">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+<span class="font-label-bold text-label-bold">Clear All</span>
+</button>
+<div class="flex flex-col justify-center h-full">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">shopping_bag</span>
+<span class="font-headline-md text-headline-md text-on-surface">3 Items Selected</span>
+</div>
+</div>
+<div class="w-px h-8 bg-outline-variant/50 mx-stack-sm"></div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide">Total Due</span>
+<span class="font-display-price text-display-price text-on-surface text-[32px] leading-[40px]">$32.94</span>
+</div>
+</div>
+<!-- Right: Checkout Action -->
+<button class="h-[60px] px-6 border-2 border-primary text-primary rounded-xl flex items-center gap-2 font-headline-md hover:bg-primary/5 transition-all active:scale-[0.98] mr-4">
+<span class="material-symbols-outlined">sell</span>
+<span>Add Discount</span>
+</button><button class="h-[60px] w-[40%] max-w-[400px] bg-primary text-on-primary rounded-xl flex items-center justify-between px-6 shadow-md hover:shadow-lg hover:bg-primary/90 transition-all active:scale-[0.98]">
+<span class="font-headline-md text-headline-md font-semibold tracking-wide">Proceed to Payment</span>
+<div class="w-10 h-10 bg-on-primary/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+<span class="material-symbols-outlined text-on-primary">arrow_forward</span>
+</div>
+</button>
+</div>
+</div>
+<script>
+  // Simple interaction for the search clear button
+  document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.querySelector('input[type="text"]');
+    const clearBtn = searchInput.nextElementSibling;
+    
+    searchInput.addEventListener('input', () => {
+      if(searchInput.value.length > 0) {
+        clearBtn.style.opacity = '1';
+      } else {
+        clearBtn.style.opacity = '0.5';
+      }
+    });
+    
+    clearBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      searchInput.focus();
+      clearBtn.style.opacity = '0.5';
+    });
+  });
+</script></main></div><div class="fixed inset-0 z-[100] flex items-center justify-center hidden" id="clear-all-modal"><div class="absolute inset-0 bg-inverse-surface/80 backdrop-blur-sm"></div><div class="relative bg-surface-container-lowest rounded-xl shadow-lg max-w-md w-full p-margin-edge flex flex-col gap-stack-md animate-in fade-in zoom-in duration-300"><div class="flex flex-col gap-2"><h3 class="font-headline-lg text-headline-lg text-on-surface">Clear All Items?</h3><p class="font-body-md text-body-md text-on-surface-variant">This will remove all items currently in the cart. This action cannot be undone.</p></div><div class="flex gap-gutter mt-2"><button class="flex-1 h-touch-target-min rounded-lg border border-outline-variant font-label-bold text-label-bold text-on-surface hover:bg-surface-container-high transition-colors" onclick="document.getElementById('clear-all-modal').classList.add('hidden')">Cancel</button><button class="flex-1 h-touch-target-min rounded-lg bg-error text-on-error font-label-bold text-label-bold hover:bg-error/90 transition-colors shadow-sm">Clear All</button></div></div></div></body></html>
