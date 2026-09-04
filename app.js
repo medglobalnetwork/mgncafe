@@ -5942,15 +5942,14 @@ function openProductModal(productId = null) {
     }
   });
 
+  let portionsAutoSet = isEditing && hasPortionsInitial;
   nameInput?.addEventListener("input", () => {
     const val = (nameInput.value || "").toLowerCase();
-    if ((val.includes("pizza") || val.includes("sweet corn") || val.includes("corn")) && portionsToggle && !portionsToggle.checked) {
+    const isPortionName = val.includes("pizza") || val.includes("sweet corn") || val.includes("corn");
+    if (isPortionName && !portionsAutoSet && portionsToggle && !portionsToggle.checked) {
+      portionsAutoSet = true;
       portionsToggle.checked = true;
-      portionsSection?.classList.remove("hidden");
-      const p = parseFloat(priceInput.value) || 100;
-      quarterInput.value = Math.round(p * 0.35);
-      halfInput.value = Math.round(p * 0.6);
-      fullInput.value = p;
+      portionsToggle.dispatchEvent(new Event("change"));
     }
   });
 
