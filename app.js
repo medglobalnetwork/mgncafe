@@ -315,7 +315,8 @@ class POSState {
       fallbackIcon: productData.fallbackIcon || (productData.isCombo ? "fastfood" : "local_cafe"),
       color: productData.color || (productData.isCombo ? "#ffdcc2" : "#eff4ff"),
       isCombo: Boolean(productData.isCombo),
-      comboItems: Array.isArray(productData.comboItems) ? productData.comboItems : []
+      comboItems: Array.isArray(productData.comboItems) ? productData.comboItems : [],
+      portions: productData.portions || null
     };
 
     this.products.unshift(newProduct);
@@ -354,7 +355,8 @@ class POSState {
         fallbackIcon: updatedData.fallbackIcon || this.products[index].fallbackIcon,
         color: updatedData.color || this.products[index].color,
         isCombo: Boolean(updatedData.isCombo),
-        comboItems: Array.isArray(updatedData.comboItems) ? updatedData.comboItems : []
+        comboItems: Array.isArray(updatedData.comboItems) ? updatedData.comboItems : [],
+        portions: updatedData.portions !== undefined ? updatedData.portions : this.products[index].portions
       };
 
       if (!this.categories.includes(updatedData.category)) {
@@ -452,10 +454,11 @@ class POSState {
     return true;
   }
 
-  // --- TARGETED CART OPERATIONS WITH POPUP EFFECTS & COMBO SUPPORT ---
-  addToCart(product, customModifier = "", cardElement = null) {
+  // --- TARGETED CART OPERATIONS WITH POPUP EFFECTS & COMBO/PORTION SUPPORT ---
+  addToCart(product, customModifier = "", cardElement = null, customPrice = null) {
     const modifierToUse = customModifier || product.defaultModifier || "";
-    const existing = this.cart.find(item => item.productId === product.id && item.modifier === modifierToUse);
+    const priceToUse = (typeof customPrice === "number" && !isNaN(customPrice) && customPrice > 0) ? customPrice : product.price;
+    const existing = this.cart.find(item => item.productId === product.id && item.modifier === modifierToUse && item.price === priceToUse);
     let targetCartId = null;
 
     if (existing) {
@@ -467,7 +470,7 @@ class POSState {
         id: targetCartId,
         productId: product.id,
         name: product.name,
-        price: product.price,
+        price: priceToUse,
         qty: 1,
         modifier: modifierToUse,
         sku: product.sku,
@@ -1133,13 +1136,48 @@ function getSanitizedProductsForSync(products) {
       fallbackIcon: p.fallbackIcon || "restaurant",
       color: p.color || "#6b7280",
       isCombo: !!p.isCombo,
-      comboItems: p.comboItems || []
+      comboItems: p.comboItems || [],
+      portions: p.portions || null
     };
     if (p.img && (!p.img.startsWith("data:") || p.img.length < 15000)) {
       clean.img = p.img;
     }
     return clean;
   });
+}
+
+// Helper: Detect whether a product has portion pricing (Quarter / Half / Full)
+function isPortionItem(product) {
+  if (!product) return false;
+  if (product.portions && product.portions.hasPortions) return true;
+  const name = (product.name || "").toLowerCase();
+  const cat = (product.category || "").toLowerCase();
+  return name.includes("pizza") || cat.includes("pizza") ||
+         name.includes("sweet corn") || name.includes("corn") || cat.includes("corn");
+}
+
+// Helper: Get portion prices (Quarter / Half / Full)
+function getPortionPrices(product) {
+  if (!product) return { quarter: 0, half: 0, full: 0 };
+  const basePrice = parseFloat(product.price) || 0;
+  if (product.portions && product.portions.hasPortions) {
+    return {
+      quarter: typeof product.portions.quarterPrice === "number" && product.portions.quarterPrice > 0 
+        ? product.portions.quarterPrice 
+        : Math.max(10, Math.round(basePrice * 0.35)),
+      half: typeof product.portions.halfPrice === "number" && product.portions.halfPrice > 0 
+        ? product.portions.halfPrice 
+        : Math.max(20, Math.round(basePrice * 0.6)),
+      full: typeof product.portions.fullPrice === "number" && product.portions.fullPrice > 0 
+        ? product.portions.fullPrice 
+        : basePrice
+    };
+  }
+  return {
+    quarter: Math.max(10, Math.round(basePrice * 0.35)),
+    half: Math.max(20, Math.round(basePrice * 0.6)),
+    full: basePrice
+  };
 }
 
 // ==========================================
@@ -1746,8 +1784,11 @@ function updateCartPanelDOM(highlightCartId = null) {
             <span class="font-label-bold text-sm text-on-surface truncate font-bold leading-tight">${item.name}</span>
             ${item.isCombo ? `<span class="px-1.5 py-0.2 bg-amber-500/20 text-amber-800 text-[8.5px] font-black rounded uppercase">COMBO</span>` : ''}
           </div>
-          <span class="text-xs text-on-surface-variant leading-none mt-1 truncate">
-            ${item.isCombo && item.comboItems && item.comboItems.length > 0 ? item.comboItems.map(ci => `${ci.qty || 1}x ${ci.name}`).join(' + ') : (item.modifier || 'Standard')}
+          <span class="text-xs text-on-surface-variant leading-none mt-1 truncate flex items-center gap-1">
+            ${['Quarter', 'Half', 'Full'].includes(item.modifier) ? `
+              <span class="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-800 font-extrabold text-[10px] uppercase">${item.modifier}</span>
+              <span class="text-[11px] text-on-surface-variant">· ${pos.settings.currency}${item.price.toFixed(2)}</span>
+            ` : (item.isCombo && item.comboItems && item.comboItems.length > 0 ? item.comboItems.map(ci => `${ci.qty || 1}x ${ci.name}`).join(' + ') : (item.modifier || 'Standard'))}
           </span>
         </div>
         <div class="flex items-center gap-1 shrink-0 bg-surface-container rounded-full p-1 h-7 shadow-inner">
@@ -2007,6 +2048,9 @@ function updateProductGridDOM() {
   } else {
     gridContainer.innerHTML = filteredProducts.map(p => {
       const inCartQty = pos.getItemCartQuantity(p.id);
+      const isPortion = isPortionItem(p);
+      const portionPrices = isPortion ? getPortionPrices(p) : null;
+
       return `
         <div class="relative group">
           <div 
@@ -2033,12 +2077,12 @@ function updateProductGridDOM() {
                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                 />
                 <div class="w-full h-full hidden items-center justify-center" style="background-color: ${p.color || '#e0ecfe'}">
-                  <span class="material-symbols-outlined text-[48px] text-primary">${p.fallbackIcon || 'lunch_dining'}</span>
+                  <span class="material-symbols-outlined text-[48px] text-primary">${p.fallbackIcon || (isPortion ? 'local_pizza' : 'lunch_dining')}</span>
                 </div>
               ` : `
                 <div class="w-full h-full flex items-center justify-center" style="background-color: ${p.color || '#e0ecfe'}">
                   <div class="w-full h-1.5 absolute top-0 left-0 bg-primary/20"></div>
-                  <span class="material-symbols-outlined text-[48px] text-primary">${p.fallbackIcon || 'local_cafe'}</span>
+                  <span class="material-symbols-outlined text-[48px] text-primary">${p.fallbackIcon || (isPortion ? 'local_pizza' : 'local_cafe')}</span>
                 </div>
               `}
 
@@ -2047,16 +2091,21 @@ function updateProductGridDOM() {
                   <span class="material-symbols-outlined text-[11px]">local_fire_department</span>
                   COMBO
                 </div>
+              ` : isPortion ? `
+                <div class="absolute top-2.5 left-2.5 px-2 py-0.5 bg-amber-600/90 backdrop-blur-md text-white font-black text-[9px] rounded-full shadow-md z-10 flex items-center gap-0.5 uppercase tracking-wider">
+                  <span class="material-symbols-outlined text-[11px]">pie_chart</span>
+                  PORTIONS
+                </div>
               ` : ''}
 
               <!-- Customization Tune Button -->
               <button 
                 type="button"
-                onclick="event.stopPropagation(); openItemCustomizePopup('${p.id}');"
+                onclick="event.stopPropagation(); ${isPortion ? `openPortionSelectionModal('${p.id}');` : `openItemCustomizePopup('${p.id}');`}"
                 class="absolute ${inCartQty > 0 ? 'top-10' : 'top-2.5'} right-2.5 w-7 h-7 rounded-full bg-surface/90 backdrop-blur-md hover:bg-primary hover:text-white text-on-surface-variant flex items-center justify-center transition-all opacity-100 lg:opacity-0 group-hover:opacity-100 shadow-sm z-10 border border-outline-variant/30 active:scale-90"
-                title="Customize Item"
+                title="${isPortion ? 'Select Portion' : 'Customize Item'}"
               >
-                <span class="material-symbols-outlined text-[14px]">tune</span>
+                <span class="material-symbols-outlined text-[14px]">${isPortion ? 'pie_chart' : 'tune'}</span>
               </button>
             </div>
 
@@ -2065,12 +2114,23 @@ function updateProductGridDOM() {
               <!-- Main Row: Name (Left) & Price (Right) in the SAME row -->
               <div class="flex items-center justify-between gap-2 w-full">
                 <span class="font-bold text-[13.5px] text-on-surface line-clamp-1 leading-snug flex-1">${p.name}</span>
-                <span class="font-display text-[15px] font-extrabold text-primary tabular-nums shrink-0 text-right">${pos.settings.currency}${p.price.toFixed(2)}</span>
+                ${isPortion ? `
+                  <div class="flex flex-col items-end shrink-0 text-right leading-none">
+                    <span class="font-display text-[13.5px] font-extrabold text-primary tabular-nums">${pos.settings.currency}${portionPrices.quarter} - ${portionPrices.full}</span>
+                  </div>
+                ` : `
+                  <span class="font-display text-[15px] font-extrabold text-primary tabular-nums shrink-0 text-right">${pos.settings.currency}${p.price.toFixed(2)}</span>
+                `}
               </div>
 
               <!-- Subtitle Row: Category / Combo info & Low stock indicator -->
               <div class="flex items-center justify-between gap-2 w-full text-[11px] text-on-surface-variant/80">
-                ${p.isCombo && p.comboItems && p.comboItems.length > 0 ? `
+                ${isPortion ? `
+                  <span class="text-[9.5px] font-extrabold text-amber-800 bg-amber-500/15 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                    <span class="material-symbols-outlined text-[11px]">pie_chart</span>
+                    Quarter · Half · Full
+                  </span>
+                ` : p.isCombo && p.comboItems && p.comboItems.length > 0 ? `
                   <span class="text-[10px] font-bold text-amber-700 truncate flex items-center gap-0.5 flex-1">
                     <span class="material-symbols-outlined text-[11px]">fastfood</span>
                     ${p.comboItems.length} Items Bundle
@@ -2195,6 +2255,11 @@ function updateProductManagerGridDOM() {
           ${product.isCombo && product.comboItems && product.comboItems.length > 0 ? `
             <div class="text-[10px] text-amber-700 font-bold bg-amber-500/10 px-2 py-0.5 rounded mt-1 truncate">
               Includes: ${product.comboItems.map(ci => `${ci.qty || 1}x ${ci.name}`).join(' + ')}
+            </div>
+          ` : isPortionItem(product) ? `
+            <div class="text-[10px] text-amber-800 font-bold bg-amber-500/10 px-2 py-0.5 rounded mt-1 flex items-center justify-between">
+              <span>Portions:</span>
+              <span>Q: ${pos.settings.currency}${getPortionPrices(product).quarter} · H: ${pos.settings.currency}${getPortionPrices(product).half} · F: ${pos.settings.currency}${getPortionPrices(product).full}</span>
             </div>
           ` : ''}
         </div>
@@ -2914,8 +2979,11 @@ function renderDashboardView() {
                   <span class="font-label-bold text-sm text-on-surface truncate font-bold leading-tight">${item.name}</span>
                   ${item.isCombo ? `<span class="px-1.5 py-0.2 bg-amber-500/20 text-amber-800 text-[8.5px] font-black rounded uppercase">COMBO</span>` : ''}
                 </div>
-                <span class="text-xs text-on-surface-variant leading-none mt-1 truncate">
-                  ${item.isCombo && item.comboItems && item.comboItems.length > 0 ? item.comboItems.map(ci => `${ci.qty || 1}x ${ci.name}`).join(' + ') : (item.modifier || 'Standard')}
+                <span class="text-xs text-on-surface-variant leading-none mt-1 truncate flex items-center gap-1">
+                  ${['Quarter', 'Half', 'Full'].includes(item.modifier) ? `
+                    <span class="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-800 font-extrabold text-[10px] uppercase">${item.modifier}</span>
+                    <span class="text-[11px] text-on-surface-variant">· ${pos.settings.currency}${item.price.toFixed(2)}</span>
+                  ` : (item.isCombo && item.comboItems && item.comboItems.length > 0 ? item.comboItems.map(ci => `${ci.qty || 1}x ${ci.name}`).join(' + ') : (item.modifier || 'Standard'))}
                 </span>
               </div>
               <div class="flex items-center gap-1 shrink-0 bg-surface-container rounded-full p-1 h-7 shadow-inner">
@@ -4505,9 +4573,18 @@ function renderKitchenOrderCard(order) {
               </div>
 
               ${item.modifier ? `
-                <div class="mt-1 pl-7 text-[11px] text-primary font-bold flex items-center gap-1">
-                  <span class="material-symbols-outlined text-[12px]">tune</span>
-                  <span>${item.modifier}</span>
+                <div class="mt-1 pl-7 text-[11px] flex items-center gap-1">
+                  ${['Quarter', 'Half', 'Full'].includes(item.modifier) ? `
+                    <span class="px-2 py-0.5 rounded-md bg-amber-600 text-white font-black text-[10px] uppercase tracking-wider flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[12px]">pie_chart</span>
+                      <span>${item.modifier} Size</span>
+                    </span>
+                  ` : `
+                    <span class="text-primary font-bold flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[12px]">tune</span>
+                      <span>${item.modifier}</span>
+                    </span>
+                  `}
                 </div>
               ` : ''}
 
@@ -5431,6 +5508,12 @@ function openProductModal(productId = null) {
   let isComboState = Boolean(product.isCombo);
   let comboItemsList = Array.isArray(product.comboItems) ? JSON.parse(JSON.stringify(product.comboItems)) : [];
 
+  const existingPortions = product.portions || (isPortionItem(product) ? getPortionPrices(product) : null);
+  const hasPortionsInitial = Boolean(product.portions?.hasPortions || (isPortionItem(product) && isEditing));
+  const quarterVal = existingPortions ? (existingPortions.quarterPrice || existingPortions.quarter || Math.round((product.price || 100) * 0.35)) : Math.round((product.price || 100) * 0.35);
+  const halfVal = existingPortions ? (existingPortions.halfPrice || existingPortions.half || Math.round((product.price || 100) * 0.6)) : Math.round((product.price || 100) * 0.6);
+  const fullVal = existingPortions ? (existingPortions.fullPrice || existingPortions.full || (product.price || 100)) : (product.price || 100);
+
   const modal = document.getElementById("general-modal");
   modal.innerHTML = `
     <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl max-w-xl w-full mx-2 sm:mx-auto p-4 sm:p-6 flex flex-col gap-3.5 sm:gap-4 animate-fade-in-up border border-outline-variant/30 my-auto max-h-[90vh] overflow-y-auto">
@@ -5500,6 +5583,38 @@ function openProductModal(productId = null) {
           <div class="flex flex-col gap-1">
             <label class="font-label-bold text-xs text-on-surface-variant font-bold">Default Modifier Note</label>
             <input id="pm-modifier" class="h-10 px-3 rounded-xl bg-surface border border-outline-variant text-on-surface font-body-md text-sm outline-none focus:ring-2 focus:ring-primary" value="${product.defaultModifier || ''}" placeholder="e.g. Less Sugar / Extra Cheese" />
+          </div>
+
+          <!-- Portion Sizes (Quarter / Half / Full) Section -->
+          <div class="p-3 bg-surface-container rounded-xl border border-outline-variant/30 flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-[18px]">pie_chart</span>
+                <div>
+                  <span class="font-label-bold text-xs font-bold text-on-surface">Portion Sizes (Quarter / Half / Full)</span>
+                  <p class="text-[10px] text-on-surface-variant">Separate pricing for Pizza & Sweet Corn portions</p>
+                </div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="pm-has-portions-toggle" class="sr-only peer" ${hasPortionsInitial ? 'checked' : ''}>
+                <div class="w-9 h-5 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+            </div>
+
+            <div id="pm-portions-section" class="grid grid-cols-3 gap-2 ${hasPortionsInitial ? '' : 'hidden'} pt-2 border-t border-outline-variant/20">
+              <div class="flex flex-col gap-1">
+                <label class="font-label-bold text-[10.5px] text-on-surface-variant font-bold">Quarter (₹)</label>
+                <input id="pm-quarter-price" type="number" step="5" class="h-8 px-2 rounded-lg bg-surface border border-outline-variant text-on-surface text-xs font-bold outline-none focus:ring-1 focus:ring-primary" value="${quarterVal}" />
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="font-label-bold text-[10.5px] text-on-surface-variant font-bold">Half (₹)</label>
+                <input id="pm-half-price" type="number" step="5" class="h-8 px-2 rounded-lg bg-surface border border-outline-variant text-on-surface text-xs font-bold outline-none focus:ring-1 focus:ring-primary" value="${halfVal}" />
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="font-label-bold text-[10.5px] text-on-surface-variant font-bold">Full (₹)</label>
+                <input id="pm-full-price" type="number" step="5" class="h-8 px-2 rounded-lg bg-surface border border-outline-variant text-on-surface text-xs font-bold outline-none focus:ring-1 focus:ring-primary" value="${fullVal}" />
+              </div>
+            </div>
           </div>
 
           <div class="flex flex-col gap-1.5 p-3 rounded-xl bg-surface-container border border-outline-variant/30">
@@ -5809,6 +5924,36 @@ function openProductModal(productId = null) {
   priceInput?.addEventListener("input", updateLivePreview);
   catInput?.addEventListener("change", updateLivePreview);
 
+  const portionsToggle = document.getElementById("pm-has-portions-toggle");
+  const portionsSection = document.getElementById("pm-portions-section");
+  const quarterInput = document.getElementById("pm-quarter-price");
+  const halfInput = document.getElementById("pm-half-price");
+  const fullInput = document.getElementById("pm-full-price");
+
+  portionsToggle?.addEventListener("change", (e) => {
+    if (e.target.checked) {
+      portionsSection?.classList.remove("hidden");
+      const p = parseFloat(priceInput.value) || 100;
+      if (!quarterInput.value || quarterInput.value === "0") quarterInput.value = Math.round(p * 0.35);
+      if (!halfInput.value || halfInput.value === "0") halfInput.value = Math.round(p * 0.6);
+      if (!fullInput.value || fullInput.value === "0") fullInput.value = p;
+    } else {
+      portionsSection?.classList.add("hidden");
+    }
+  });
+
+  nameInput?.addEventListener("input", () => {
+    const val = (nameInput.value || "").toLowerCase();
+    if ((val.includes("pizza") || val.includes("sweet corn") || val.includes("corn")) && portionsToggle && !portionsToggle.checked) {
+      portionsToggle.checked = true;
+      portionsSection?.classList.remove("hidden");
+      const p = parseFloat(priceInput.value) || 100;
+      quarterInput.value = Math.round(p * 0.35);
+      halfInput.value = Math.round(p * 0.6);
+      fullInput.value = p;
+    }
+  });
+
   document.querySelectorAll(".pm-icon-btn").forEach(btn => {
     btn.onclick = () => {
       document.querySelectorAll(".pm-icon-btn").forEach(b => b.classList.replace("bg-primary", "bg-surface"));
@@ -5852,6 +5997,18 @@ function openProductModal(productId = null) {
       return;
     }
 
+    const hasPortions = portionsToggle?.checked || false;
+    const quarterPrice = parseFloat(quarterInput?.value) || 0;
+    const halfPrice = parseFloat(halfInput?.value) || 0;
+    const fullPrice = parseFloat(fullInput?.value) || price;
+
+    const portions = hasPortions ? {
+      hasPortions: true,
+      quarterPrice,
+      halfPrice,
+      fullPrice
+    } : null;
+
     const payload = {
       name,
       price,
@@ -5864,7 +6021,8 @@ function openProductModal(productId = null) {
       fallbackIcon: selectedIcon,
       color: selectedColor,
       isCombo: isComboState,
-      comboItems: isComboState ? comboItemsList : []
+      comboItems: isComboState ? comboItemsList : [],
+      portions: portions
     };
 
     if (isEditing) {
@@ -6322,6 +6480,120 @@ function executeImportFromTextarea() {
     showToast("Invalid code format. Please copy full code from Device 1.", "error", "error");
   }
 }
+
+function openPortionSelectionModal(productId, cardElement = null) {
+  const product = pos.products.find(p => p.id === productId);
+  if (!product) return;
+
+  const modal = document.getElementById("general-modal");
+  if (!modal) return;
+
+  const prices = getPortionPrices(product);
+  const isPizza = (product.name || "").toLowerCase().includes("pizza") || (product.category || "").toLowerCase().includes("pizza");
+
+  modal.innerHTML = `
+    <div class="relative bg-surface-container-lowest rounded-3xl shadow-2xl max-w-lg w-full mx-2 sm:mx-auto p-5 sm:p-6 flex flex-col gap-4 animate-fade-in-up border border-outline-variant/30 my-auto">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-outline-variant/20 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl overflow-hidden bg-surface-container flex items-center justify-center shrink-0 border border-outline-variant/30 shadow-xs">
+            ${product.img ? `
+              <img src="${product.img}" class="w-full h-full object-cover" />
+            ` : `
+              <span class="material-symbols-outlined text-[28px] text-primary">${product.fallbackIcon || (isPizza ? 'local_pizza' : 'grain')}</span>
+            `}
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-headline-lg text-base sm:text-lg font-bold text-on-surface">${product.name}</h3>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary uppercase">${product.category}</span>
+            </div>
+            <p class="text-xs text-on-surface-variant font-medium">Select portion size for order:</p>
+          </div>
+        </div>
+        <button onclick="closeModal()" class="w-8 h-8 rounded-full hover:bg-surface-variant flex items-center justify-center text-on-surface-variant transition-colors">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- 3 Portion Cards: Quarter / Half / Full -->
+      <div class="grid grid-cols-3 gap-2.5 sm:gap-3 my-1">
+        <!-- 1. Quarter Card -->
+        <div 
+          onclick="selectPortionAndAdd('${product.id}', 'Quarter', ${prices.quarter})"
+          class="group relative bg-surface border-2 border-outline-variant/40 hover:border-amber-500 rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-between text-center cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 active:scale-95 select-none"
+        >
+          <div class="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-amber-500/10 text-amber-700 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
+            <span class="material-symbols-outlined text-[26px] sm:text-[30px]">${isPizza ? 'pie_chart' : 'grain'}</span>
+          </div>
+          <span class="font-bold text-xs sm:text-sm text-on-surface">Quarter</span>
+          <span class="text-[10px] sm:text-[11px] text-on-surface-variant mb-2 font-medium">1/4 Portion</span>
+          <div class="w-full py-1.5 sm:py-2 rounded-xl bg-surface-container group-hover:bg-amber-600 group-hover:text-white transition-colors font-extrabold text-sm sm:text-base text-amber-700">
+            ${pos.settings.currency}${prices.quarter.toFixed(2)}
+          </div>
+          <span class="text-[10px] font-bold text-on-surface-variant mt-2 group-hover:text-amber-700 flex items-center gap-0.5">
+            <span class="material-symbols-outlined text-[13px]">add</span>
+            Add
+          </span>
+        </div>
+
+        <!-- 2. Half Card -->
+        <div 
+          onclick="selectPortionAndAdd('${product.id}', 'Half', ${prices.half})"
+          class="group relative bg-surface border-2 border-outline-variant/40 hover:border-orange-500 rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-between text-center cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 active:scale-95 select-none"
+        >
+          <div class="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-orange-500/10 text-orange-700 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
+            <span class="material-symbols-outlined text-[26px] sm:text-[30px]">${isPizza ? 'pie_chart' : 'grain'}</span>
+          </div>
+          <span class="font-bold text-xs sm:text-sm text-on-surface">Half</span>
+          <span class="text-[10px] sm:text-[11px] text-on-surface-variant mb-2 font-medium">1/2 Portion</span>
+          <div class="w-full py-1.5 sm:py-2 rounded-xl bg-surface-container group-hover:bg-orange-600 group-hover:text-white transition-colors font-extrabold text-sm sm:text-base text-orange-700">
+            ${pos.settings.currency}${prices.half.toFixed(2)}
+          </div>
+          <span class="text-[10px] font-bold text-on-surface-variant mt-2 group-hover:text-orange-700 flex items-center gap-0.5">
+            <span class="material-symbols-outlined text-[13px]">add</span>
+            Add
+          </span>
+        </div>
+
+        <!-- 3. Full Card -->
+        <div 
+          onclick="selectPortionAndAdd('${product.id}', 'Full', ${prices.full})"
+          class="group relative bg-surface border-2 border-outline-variant/40 hover:border-emerald-500 rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-between text-center cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 active:scale-95 select-none"
+        >
+          <div class="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-emerald-500/10 text-emerald-700 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
+            <span class="material-symbols-outlined text-[26px] sm:text-[30px]">${isPizza ? 'local_pizza' : 'grain'}</span>
+          </div>
+          <span class="font-bold text-xs sm:text-sm text-on-surface">Full</span>
+          <span class="text-[10px] sm:text-[11px] text-on-surface-variant mb-2 font-medium">Full Size</span>
+          <div class="w-full py-1.5 sm:py-2 rounded-xl bg-surface-container group-hover:bg-emerald-600 group-hover:text-white transition-colors font-extrabold text-sm sm:text-base text-emerald-700">
+            ${pos.settings.currency}${prices.full.toFixed(2)}
+          </div>
+          <span class="text-[10px] font-bold text-on-surface-variant mt-2 group-hover:text-emerald-700 flex items-center gap-0.5">
+            <span class="material-symbols-outlined text-[13px]">add</span>
+            Add
+          </span>
+        </div>
+      </div>
+
+      <!-- Bottom Cancel Button -->
+      <div class="flex justify-end pt-2 border-t border-outline-variant/20">
+        <button onclick="closeModal()" class="h-10 px-5 rounded-xl border border-outline-variant text-on-surface font-label-bold text-xs hover:bg-surface-variant transition-colors">
+          Cancel
+        </button>
+      </div>
+    </div>
+  `;
+  modal.classList.remove("hidden");
+}
+
+window.selectPortionAndAdd = (productId, portionName, price) => {
+  const product = pos.products.find(p => p.id === productId);
+  if (!product) return;
+  pos.addToCart(product, portionName, null, price);
+  closeModal();
+  showToast(`Added ${product.name} (${portionName}) · ${pos.settings.currency}${price.toFixed(2)}`, "success", "check");
+};
 
 function testLiveCloudSyncPing() {
   if (typeof cloudSync !== "undefined") {
@@ -7152,7 +7424,11 @@ function bindProductCardEvents() {
       const pid = card.dataset.productId;
       const product = pos.products.find(p => p.id === pid);
       if (product) {
-        pos.addToCart(product, "", card);
+        if (isPortionItem(product)) {
+          openPortionSelectionModal(product.id, card);
+        } else {
+          pos.addToCart(product, "", card);
+        }
       }
     };
     card.onkeydown = (e) => {
@@ -7161,7 +7437,11 @@ function bindProductCardEvents() {
         const pid = card.dataset.productId;
         const product = pos.products.find(p => p.id === pid);
         if (product) {
-          pos.addToCart(product, "", card);
+          if (isPortionItem(product)) {
+            openPortionSelectionModal(product.id, card);
+          } else {
+            pos.addToCart(product, "", card);
+          }
         }
       }
     };
