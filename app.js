@@ -4208,6 +4208,18 @@ function renderConfirmationView() {
           </div>
 
           <h1 class="font-display-price text-2xl sm:text-[36px] font-bold text-on-surface mb-1.5 sm:mb-2">Order Confirmed!</h1>
+          <div class="flex items-center gap-3 mb-2">
+            <div class="px-4 py-2 bg-primary-container/40 rounded-xl border border-primary/30">
+              <span class="font-label-bold text-[10px] text-on-surface-variant uppercase tracking-wider">Receipt</span>
+              <p class="font-headline-md text-lg sm:text-xl font-bold text-primary">#${activeOrder.receiptNumber}</p>
+            </div>
+            ${activeOrder.kitchenToken ? `
+            <div class="px-4 py-2 bg-secondary-container/40 rounded-xl border border-secondary/30">
+              <span class="font-label-bold text-[10px] text-on-surface-variant uppercase tracking-wider">Token</span>
+              <p class="font-headline-md text-lg sm:text-xl font-bold text-secondary">${activeOrder.kitchenToken}</p>
+            </div>
+            ` : ''}
+          </div>
           <p class="font-body-md text-xs sm:text-sm text-on-surface-variant max-w-md mb-4 sm:mb-6">
             Transaction successfully processed. The digital receipt has been logged.
           </p>
