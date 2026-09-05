@@ -6587,10 +6587,14 @@ function openPortionSelectionModal(productId, cardElement = null) {
         </div>
       </div>
 
-      <!-- Bottom Cancel Button -->
-      <div class="flex justify-end pt-2 border-t border-outline-variant/20">
+      <!-- Bottom Buttons -->
+      <div class="flex items-center gap-2 pt-2 border-t border-outline-variant/20">
         <button onclick="closeModal()" class="h-10 px-5 rounded-xl border border-outline-variant text-on-surface font-label-bold text-xs hover:bg-surface-variant transition-colors">
           Cancel
+        </button>
+        <button onclick="selectPortionAndProceed('${product.id}')" class="h-10 px-4 rounded-xl bg-primary text-on-primary font-label-bold text-xs hover:bg-primary/90 active:scale-95 transition-all flex items-center gap-1.5 shadow-md">
+          <span class="material-symbols-outlined text-[15px]">shopping_bag</span>
+          Proceed to Payment
         </button>
       </div>
     </div>
@@ -6604,6 +6608,12 @@ window.selectPortionAndAdd = (productId, portionName, price) => {
   pos.addToCart(product, portionName, null, price);
   closeModal();
   showToast(`Added ${product.name} (${portionName}) · ${pos.settings.currency}${price.toFixed(2)}`, "success", "check");
+};
+
+window.selectPortionAndProceed = (productId) => {
+  const prices = getPortionPrices(pos.products.find(p => p.id === productId));
+  selectPortionAndAdd(productId, 'Full', prices.full);
+  setTimeout(() => setRoute('payment-method'), 100);
 };
 
 function testLiveCloudSyncPing() {
